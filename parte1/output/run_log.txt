@@ -1,0 +1,486 @@
+======================================================================
+ARCHIVOS PRESENTES EN LA CARPETA data/
+======================================================================
+  batches.csv                      2628.6 KB
+  buffer_events.csv                3035.3 KB
+  calendar.csv                        9.6 KB
+  daily_throughput.csv              252.6 KB
+  daily_wip.csv                     440.5 KB
+  failures.csv                       21.1 KB
+  log_arrivals.csv                  305.3 KB
+  product_outputs.csv               328.5 KB
+  station_events.csv               3108.6 KB
+
+>>> Archivos esperados por el PDF que NO estan presentes:
+    ['inputs_readme.md', 'parameters.csv']
+
+======================================================================
+PERFIL GENERAL POR TABLA
+======================================================================
+
+----- batches.csv  ->  filas=22,687  columnas=13
+Columnas y dtypes:
+   replication              int64      nulos=  0.0%  distintos=5
+   batch_id                 int64      nulos=  0.0%  distintos=1590
+   station                  object     nulos=  0.0%  distintos=5
+   product                  object     nulos=  0.0%  distintos=3
+   volume_in_m3             float64    nulos=  0.0%  distintos=7101
+   volume_out_m3            float64    nulos=  0.0%  distintos=4365
+   scrap_m3                 float64    nulos=  0.0%  distintos=3997
+   enter_buffer_time_h      float64    nulos=  0.0%  distintos=16605
+   start_process_time_h     float64    nulos=  0.0%  distintos=18629
+   end_process_time_h       float64    nulos=  0.0%  distintos=22687
+   setup_time_h             float64    nulos=  0.0%  distintos=4
+   birth_time_h             float64    nulos=  0.0%  distintos=9174
+   source_aserradero_batch_id int64      nulos=  0.0%  distintos=1590
+Muestra (head 3):
+ replication  batch_id    station product  volume_in_m3  volume_out_m3  scrap_m3  enter_buffer_time_h  start_process_time_h  end_process_time_h  setup_time_h  birth_time_h  source_aserradero_batch_id
+           0         1 aserradero      P1        21.692         11.018    10.674             7.151830              7.151830            9.705556          0.00      9.705556                           1
+           0         1       bano      P1        10.897         10.582     0.314             9.705556              9.705556           10.137415          0.00      9.705556                           1
+           0         2 aserradero      P2        24.082         12.195    11.887             8.182638             10.255556           12.967488          0.55     12.967488                           2
+
+----- buffer_events.csv  ->  filas=47,565  columnas=7
+Columnas y dtypes:
+   replication              int64      nulos=  0.0%  distintos=5
+   buffer                   object     nulos=  0.0%  distintos=4
+   time_h                   float64    nulos=  0.0%  distintos=34380
+   event_type               object     nulos=  0.0%  distintos=2
+   product                  object     nulos=  0.0%  distintos=4
+   delta_m3                 float64    nulos=  0.0%  distintos=9865
+   level_after_m3           float64    nulos=  0.0%  distintos=17569
+Muestra (head 3):
+ replication   buffer   time_h event_type product   delta_m3  level_after_m3
+           0 log_yard 7.151830        PUT     LOG  21.876007       21.876007
+           0 log_yard 7.151830        GET     LOG -21.876007        0.000000
+           0 log_yard 8.182638        PUT     LOG  23.699157       23.699157
+
+----- calendar.csv  ->  filas=365  columnas=5
+Columnas y dtypes:
+   day                      int64      nulos=  0.0%  distintos=365
+   planned_operating_hours  float64    nulos=  0.0%  distintos=2
+   shift_open_time_h        float64    nulos= 14.2%  distintos=313
+   shift_close_time_h       float64    nulos= 14.2%  distintos=313
+   is_operating_day         bool       nulos=  0.0%  distintos=2
+Muestra (head 3):
+ day  planned_operating_hours  shift_open_time_h  shift_close_time_h  is_operating_day
+   0                     16.0                7.0                23.0              True
+   1                     16.0               31.0                47.0              True
+   2                     16.0               55.0                71.0              True
+
+----- daily_throughput.csv  ->  filas=7,618  columnas=6
+Columnas y dtypes:
+   replication              int64      nulos=  0.0%  distintos=5
+   day                      int64      nulos=  0.0%  distintos=365
+   station                  object     nulos=  0.0%  distintos=5
+   m3_in                    float64    nulos=  0.0%  distintos=6783
+   m3_out                   float64    nulos=  0.0%  distintos=6749
+   batches_processed        int64      nulos=  0.0%  distintos=7
+Muestra (head 3):
+ replication  day    station  m3_in  m3_out  batches_processed
+           0    0 aserradero 94.236  47.763                  5
+           0    0       bano 26.514  26.199                  3
+           0    0    drymill 12.305  11.665                  1
+
+----- daily_wip.csv  ->  filas=7,300  columnas=6
+Columnas y dtypes:
+   replication              int64      nulos=  0.0%  distintos=5
+   day                      int64      nulos=  0.0%  distintos=365
+   buffer                   object     nulos=  0.0%  distintos=4
+   level_m3_eod             float64    nulos=  0.0%  distintos=1592
+   level_m3_mean            float64    nulos=  0.0%  distintos=5462
+   level_m3_max             float64    nulos=  0.0%  distintos=1796
+Muestra (head 3):
+ replication  day   buffer  level_m3_eod  level_m3_mean  level_m3_max
+           0    0 log_yard      0.000000       4.233957     30.294850
+           0    1 log_yard     43.094914       8.318859     73.094914
+           0    2 log_yard     56.283190      32.302618     64.958799
+
+----- failures.csv  ->  filas=430  columnas=4
+Columnas y dtypes:
+   replication              int64      nulos=  0.0%  distintos=5
+   station                  object     nulos=  0.0%  distintos=5
+   failure_time_h           float64    nulos=  0.0%  distintos=430
+   repair_duration_h        float64    nulos=  0.0%  distintos=430
+Muestra (head 3):
+ replication    station  failure_time_h  repair_duration_h
+           0 aserradero       94.421241           3.780504
+           0     secado      189.906518           4.147635
+           0 aserradero      300.950643           0.031079
+
+----- log_arrivals.csv  ->  filas=9,615  columnas=4
+Columnas y dtypes:
+   replication              int64      nulos=  0.0%  distintos=5
+   truck_id                 int64      nulos=  0.0%  distintos=1945
+   arrival_time_h           float64    nulos=  0.0%  distintos=9615
+   volume_m3                float64    nulos=  0.0%  distintos=7640
+Muestra (head 3):
+ replication  truck_id  arrival_time_h  volume_m3
+           0         1        7.151830     23.075
+           0         2        8.182638     24.872
+           0         3       16.301531     30.725
+
+----- product_outputs.csv  ->  filas=7,428  columnas=7
+Columnas y dtypes:
+   replication              int64      nulos=  0.0%  distintos=5
+   product                  object     nulos=  0.0%  distintos=3
+   exit_time_h              float64    nulos=  0.0%  distintos=7428
+   batch_id                 int64      nulos=  0.0%  distintos=1029
+   volume_m3                float64    nulos=  0.0%  distintos=3220
+   source_aserradero_batch_id int64      nulos=  0.0%  distintos=1590
+   lead_time_h              float64    nulos=  0.0%  distintos=4777
+Muestra (head 3):
+ replication product  exit_time_h  batch_id  volume_m3  source_aserradero_batch_id  lead_time_h
+           0      P1    10.137415         1     11.116                           1        0.441
+           0      P2    16.627090         1     11.696                           2        3.888
+           0      P1    20.200724         2     14.498                           3        0.588
+
+----- station_events.csv  ->  filas=51,497  columnas=8
+Columnas y dtypes:
+   replication              int64      nulos=  0.0%  distintos=5
+   station                  object     nulos=  0.0%  distintos=5
+   state                    object     nulos=  0.0%  distintos=5
+   start_time_h             float64    nulos=  0.0%  distintos=33323
+   end_time_h               float64    nulos=  0.0%  distintos=33323
+   product                  object     nulos= 35.6%  distintos=3
+   batch_id                 int64      nulos=  0.0%  distintos=1592
+   batch_volume_m3          float64    nulos=  0.0%  distintos=154
+Muestra (head 3):
+ replication    station     state  start_time_h  end_time_h product  batch_id  batch_volume_m3
+           0 aserradero OFF_SHIFT           0.0         7.0     NaN        -1              0.0
+           0       bano OFF_SHIFT           0.0         7.0     NaN        -1              0.0
+           0    drymill OFF_SHIFT           0.0         7.0     NaN        -1              0.0
+
+======================================================================
+DIMENSIONES DEL EXPERIMENTO
+======================================================================
+  station_events: replicas = [0, 1, 2, 3, 4]
+  failures: replicas = [0, 1, 2, 3, 4]
+  daily_throughput: replicas = [0, 1, 2, 3, 4]
+  product_outputs: replicas = [0, 1, 2, 3, 4]
+
+  calendar: dias = 0 .. 364  (total 365 dias)
+  calendar: is_operating_day -> {True: 313, False: 52}
+  calendar: planned_operating_hours unicos -> [0.0, 16.0]
+
+  station_events: t_min=0.00 h  t_max=8760.00 h
+  station_events: estaciones -> ['aserradero', 'bano', 'drymill', 'impregnado', 'secado']
+  station_events: estados   -> ['BUSY', 'DOWN', 'IDLE', 'OFF_SHIFT', 'SETUP']
+  station_events: productos -> ['P1', 'P2', 'P3']
+
+  failures: estaciones con fallas -> {'aserradero': 352, 'secado': 50, 'drymill': 18, 'impregnado': 6, 'bano': 4}
+  failures: t_min=38.91  t_max=8756.34
+  failures: repair_duration_h  min=0.003  mean=4.947  max=44.820
+
+OK - exploracion base completada.
+========================================================================
+ VALIDACION DE FALLAS vs CALENDARIO Y ESTADO DE MAQUINA
+========================================================================
+
+[0] Intervalos OFF_SHIFT por estacion (confirma quien respeta turno):
+     aserradero   OFF_SHIFT=  1539   (clasificada como turno)
+     bano         OFF_SHIFT=  1570   (clasificada como turno)
+     secado       OFF_SHIFT=     0   (clasificada como 24/7)
+     drymill      OFF_SHIFT=  1568   (clasificada como turno)
+     impregnado   OFF_SHIFT=     0   (clasificada como 24/7)
+
+[1] Clasificacion de TODAS las fallas segun ventana operativa:
+clasificacion_ventana
+EN_TURNO            364
+FUERA_DE_TURNO       52
+DIA_NO_OPERATIVO     14
+
+[2] Tabla cruzada estacion x clasificacion (conteo de fallas):
+clasificacion_ventana  EN_TURNO  FUERA_DE_TURNO  DIA_NO_OPERATIVO  TOTAL   tipo
+station                                                                        
+aserradero                  304              41                 7    352  turno
+bano                          4               0                 0      4  turno
+secado                       33              10                 7     50   24/7
+drymill                      18               0                 0     18  turno
+impregnado                    5               1                 0      6   24/7
+
+========================================================================
+ [3] HALLAZGO PRINCIPAL
+========================================================================
+Fallas en estaciones de TURNO (aserradero/bano/drymill): 374
+  - dentro de turno (esperable) ............. 326
+  - FUERA de la ventana operativa (ANOMALAS): 48  (12.8%)
+
+    Desglose de las anomalas:
+    {'FUERA_DE_TURNO': 41, 'DIA_NO_OPERATIVO': 7}
+
+    Estado de la maquina JUSTO ANTES de esas fallas anomalas:
+    {'BUSY': 48}
+
+Contraste - estaciones 24/7 (secado/impregnado): 56 fallas, de las cuales 18 fuera de turno (LEGITIMAS por operar continuo).
+
+[4] Estado de la maquina justo ANTES de la falla (todas las estaciones):
+estado_pre_falla  BUSY
+station               
+aserradero         352
+bano                 4
+secado              50
+drymill             18
+impregnado           6
+
+>> Guardado: C:\Users\Matias Arriagada R\Documents\Universidad\Quinto año universidad\Noveno semestre\Diseño de sistemas de producción\Tareas\parte1\output\tablas\fallas_clasificadas.csv
+>> Guardado: C:\Users\Matias Arriagada R\Documents\Universidad\Quinto año universidad\Noveno semestre\Diseño de sistemas de producción\Tareas\parte1\output\tablas\fallas_estacion_x_ventana.csv
+>> Guardado: C:\Users\Matias Arriagada R\Documents\Universidad\Quinto año universidad\Noveno semestre\Diseño de sistemas de producción\Tareas\parte1\output\figuras\fallas_por_ventana.png
+>> Guardado: C:\Users\Matias Arriagada R\Documents\Universidad\Quinto año universidad\Noveno semestre\Diseño de sistemas de producción\Tareas\parte1\output\figuras\fallas_hora_del_dia.png
+
+OK - validacion de fallas completada.
+Fallas anomalas a diagnosticar: 48
+
+=== Diagnostico A vs B ===
+Inicio del lote en curso estaba dentro de la ventana operativa?
+inicio_lote_en_turno
+True     40
+False     8
+
+(A) Overruns legitimos (lote iniciado en turno): 40
+(B) Violaciones reales  (lote iniciado fuera turno): 8
+
+Magnitud del overrun (h pasado el cierre del turno del dia de inicio) - casos (A):
+min    0.157659
+25%    0.435147
+50%    0.921024
+75%    1.649474
+max    7.134642
+
+Caracterizacion de los casos (B) - cuanto se salio el INICIO del lote de la ventana:
+ replication    station  batch_id  batch_start_h  shift_open_time_h  shift_close_time_h  is_operating_day  gap_inicio_fuera_ventana_h
+           0 aserradero      1434    7943.283210             7927.0              7943.0              True                    0.283210
+           1 aserradero       607    3383.036446             3367.0              3383.0              True                    0.036446
+           1 aserradero       724    4055.103025             4039.0              4055.0              True                    0.103025
+           1 aserradero       944    5303.220322             5287.0              5303.0              True                    0.220322
+           2 aserradero       740    4079.291716             4063.0              4079.0              True                    0.291716
+           3 aserradero        61     311.274437              295.0               311.0              True                    0.274437
+           3 aserradero       179     959.105059              943.0               959.0              True                    0.105059
+           3 aserradero       245    1367.332223             1351.0              1367.0              True                    0.332223
+
+  gap mediano = 0.247 h, max = 0.332 h
+
+Duracion de proceso por lote (h) - contexto, por estacion:
+            count      mean    median        max
+station                                         
+aserradero   7866  3.209072  2.981441  35.738714
+bano         2335  0.600159  0.587783   3.447177
+secado       5479  3.092403  2.958317  48.268989
+drymill      5095  1.271809  1.165819  12.051884
+impregnado   1912  1.484074  1.381570  13.806439
+
+Detalle de las fallas anomalas (primeras 20):
+ replication    station  batch_id  batch_start_h  failure_time_h  batch_end_h  shift_close_h  overrun_h_post_cierre    clasificacion  inicio_lote_en_turno
+           0 aserradero       392    2134.538945     2135.784992  2147.633586         2135.0               0.784992   FUERA_DE_TURNO                  True
+           0 aserradero       744    4126.017713     4128.809104  4130.169294         4151.0               1.809104   FUERA_DE_TURNO                  True
+           0 aserradero       748    4144.538331     4156.856414  4162.799741         4175.0               5.856414   FUERA_DE_TURNO                  True
+           0 aserradero       769    4270.914454     4271.187858  4273.560988         4271.0               0.187858   FUERA_DE_TURNO                  True
+           0 aserradero       779    4317.708515     4319.911586  4322.731793         4319.0               0.911586   FUERA_DE_TURNO                  True
+           0 aserradero      1060    5852.489243     5855.394531  5860.212228         5855.0               0.394531   FUERA_DE_TURNO                  True
+           0 aserradero      1202    6645.530605     6647.348153  6650.858575         6647.0               0.348153   FUERA_DE_TURNO                  True
+           0 aserradero      1285    7102.590041     7103.956084  7117.216679         7103.0               0.956084   FUERA_DE_TURNO                  True
+           0 aserradero      1302    7196.779880     7199.200440  7206.908212         7199.0               0.200440   FUERA_DE_TURNO                  True
+           0 aserradero      1434    7943.283210     7946.037690  7947.468521         7967.0               3.037690   FUERA_DE_TURNO                 False
+           0 aserradero      1536    8541.794646     8543.791321  8550.557219         8543.0               0.791321   FUERA_DE_TURNO                  True
+           1 aserradero        31     141.524385      144.638092   146.119373            NaN               1.638092 DIA_NO_OPERATIVO                  True
+           1 aserradero       153     813.009241      815.489340   818.874197          815.0               0.489340   FUERA_DE_TURNO                  True
+           1 aserradero       472    2612.584628     2615.345540  2619.772087         2615.0               0.345540   FUERA_DE_TURNO                  True
+           1 aserradero       607    3383.036446     3385.668232  3391.228517         3407.0               2.668232   FUERA_DE_TURNO                 False
+           1 aserradero       658    3669.360285     3672.040802  3679.981360            NaN               1.040802 DIA_NO_OPERATIVO                  True
+           1 aserradero       724    4055.103025     4056.026001  4060.924295         4079.0               1.026001   FUERA_DE_TURNO                 False
+           1 aserradero       905    5084.649994     5087.677293  5096.974003         5087.0               0.677293   FUERA_DE_TURNO                  True
+           1 aserradero       944    5303.220322     5305.546614  5309.812475         5327.0               2.546614   FUERA_DE_TURNO                 False
+           1 aserradero      1409    7870.324482     7872.875301  7876.348901            NaN               1.875301 DIA_NO_OPERATIVO                  True
+
+>> Guardado: C:\Users\Matias Arriagada R\Documents\Universidad\Quinto año universidad\Noveno semestre\Diseño de sistemas de producción\Tareas\parte1\output\tablas\fallas_anomalas_diagnostico.csv
+RESUMEN DE LA VALIDACION DE FALLAS
+--------------------------------------------------
+Total de fallas (5 replicas) .................. 430
+  Con maquina BUSY al fallar ................. 430 (100% esperado)
+  Con maquina IDLE/OFF_SHIFT al fallar ....... 0 (seria error grave)
+Dentro de ventana operativa (EN_TURNO) ....... 364
+Fuera de ventana operativa ................... 66
+  - 24/7 (secado/impregnado), legitimo ....... 18
+  - turno, overrun de lote, legitimo ......... 40
+  - turno, inicio en borde (~15 min) ......... 8
+
+>> Guardado: C:\Users\Matias Arriagada R\Documents\Universidad\Quinto año universidad\Noveno semestre\Diseño de sistemas de producción\Tareas\parte1\output\figuras\fallas_descomposicion.png
+>> Guardado: C:\Users\Matias Arriagada R\Documents\Universidad\Quinto año universidad\Noveno semestre\Diseño de sistemas de producción\Tareas\parte1\output\VEREDICTO_fallas.md
+DETECCION DE WARM-UP (Welch)
+--------------------------------------------------
+Throughput de regimen (mu, dias 150-364) ...     60.7 m3/dia
+Umbral 90% de mu ...........................     54.6 m3/dia
+Primer dia >= umbral (sostenido) ........... dia 0
+WARM-UP adoptado (redondeo a semana) ....... 7 dias (= 168 h)
+>> Persistido en C:\Users\Matias Arriagada R\Documents\Universidad\Quinto año universidad\Noveno semestre\Diseño de sistemas de producción\Tareas\parte1\output\warmup_days.txt
+
+Throughput primeros 21 dias (suavizado):
+day
+0     62.0
+1     62.7
+2     63.2
+3     55.0
+4     59.7
+5     62.7
+6     59.9
+7     59.2
+8     59.4
+9     60.8
+10    60.4
+11    59.6
+12    60.3
+13    60.9
+14    62.5
+15    63.7
+16    63.1
+17    63.1
+18    64.2
+19    62.3
+20    64.4
+>> Guardado: C:\Users\Matias Arriagada R\Documents\Universidad\Quinto año universidad\Noveno semestre\Diseño de sistemas de producción\Tareas\parte1\output\figuras\warmup_welch.png
+Warm-up aplicado: 7 dias (168 h). Periodo estacionario: [168, 8760] h
+
+[check] TOTAL horas por (rep,station): min=8592.0  max=8592.0  (esperado ~8592)
+
+========================================================================
+ DISPONIBILIDAD / UTILIZACION POR ESTACION (media de 5 replicas)
+========================================================================
+             tipo  Utiliz.  Disp.   MTBF_h  MTTR_h  fallas/año  Yield
+station                                                              
+aserradero  turno    0.841  0.935   67.249   4.584        69.6  0.500
+bano        turno    0.056  0.994  277.978   1.931         0.8  0.988
+secado       24/7    0.379  0.977  359.918   7.882         9.6  0.970
+drymill     turno    0.254  0.990  365.287   3.624         3.6  0.950
+impregnado   24/7    0.064  0.989  449.205   5.152         1.2  0.988
+
+IC95% (semiancho) de utilizacion y disponibilidad:
+            utilizacion  utilizacion_ic  disponibilidad  disponibilidad_ic
+station                                                                   
+aserradero       0.8413          0.0141          0.9352             0.0168
+bano             0.0555          0.0036          0.9944             0.0059
+secado           0.3786          0.0107          0.9766             0.0151
+drymill          0.2536          0.0070          0.9900             0.0047
+impregnado       0.0640          0.0054          0.9888             0.0129
+
+Composicion del tiempo (fraccion del total, media replicas):
+            BUSY  SETUP  IDLE  BLOCKED  DOWN  OFF_SHIFT
+station                                                
+aserradero  54.0    6.4   0.0      0.0   3.7       35.8
+bano         3.2    0.0  54.0      0.0   0.0       42.8
+secado      37.9    4.3  56.9      0.0   0.9        0.0
+drymill     14.7    3.3  39.8      0.0   0.1       42.1
+impregnado   6.4    0.0  93.5      0.0   0.1        0.0
+
+>> Guardado: C:\Users\Matias Arriagada R\Documents\Universidad\Quinto año universidad\Noveno semestre\Diseño de sistemas de producción\Tareas\parte1\output\tablas\kpis_por_replica.csv
+>> Guardado: C:\Users\Matias Arriagada R\Documents\Universidad\Quinto año universidad\Noveno semestre\Diseño de sistemas de producción\Tareas\parte1\output\tablas\disponibilidad_resumen.csv
+>> Guardado: C:\Users\Matias Arriagada R\Documents\Universidad\Quinto año universidad\Noveno semestre\Diseño de sistemas de producción\Tareas\parte1\output\figuras\composicion_estados.png
+>> Guardado: C:\Users\Matias Arriagada R\Documents\Universidad\Quinto año universidad\Noveno semestre\Diseño de sistemas de producción\Tareas\parte1\output\figuras\utilizacion_disponibilidad.png
+>> Guardado: C:\Users\Matias Arriagada R\Documents\Universidad\Quinto año universidad\Noveno semestre\Diseño de sistemas de producción\Tareas\parte1\output\figuras\yield_por_estacion.png
+
+OK - disponibilidad completada.
+========================================================================
+ (1) UTILIZACION POR ESTACION (ranking de restriccion)
+========================================================================
+   aserradero    84.1%  ##########################################
+   secado        37.9%  ##################
+   drymill       25.4%  ############
+   impregnado     6.4%  ###
+   bano           5.6%  ##
+
+   => Mayor utilizacion: 'aserradero' (84.1%), 2.2x la siguiente ('secado').
+
+========================================================================
+ (2) INANICION (IDLE) Y BLOQUEO (BLOCKED) - patron de restriccion
+========================================================================
+            IDLE_%  BLOCKED_%  BUSY_%
+station                              
+aserradero     0.0        0.0    54.0
+bano          54.0        0.0     3.2
+secado        56.9        0.0    37.9
+drymill       39.8        0.0    14.7
+impregnado    93.5        0.0     6.4
+   - El aserradero NUNCA esta IDLE (siempre tiene trozos en cola).
+   - Las estaciones aguas abajo se hambrean (IDLE alto) por falta de alimentacion.
+   - BLOCKED ~ 0 en toda la linea: la restriccion esta en la ENTRADA, no aguas abajo.
+
+========================================================================
+ (3) WIP EN log_yard: acumulacion no acotada (aguas arriba del cuello)
+========================================================================
+   Nivel log_yard: dia 7 = 86 m3  ->  dia 364 = 7733 m3
+   Pendiente de acumulacion ~ 21.21 m3/dia (crecimiento lineal => sistema saturado).
+
+   Buffers intermedios (nivel medio EOD, periodo estacionario):
+     stock_aserrado   nivel medio=    7.1 m3  pendiente=+0.001 m3/dia (estacionario)
+     stock_drymill    nivel medio=    6.3 m3  pendiente=+0.004 m3/dia (estacionario)
+     stock_seco       nivel medio=    7.7 m3  pendiente=+0.004 m3/dia (estacionario)
+
+========================================================================
+ (4) BALANCE ARRIBOS vs CAPACIDAD DEL ASERRADERO (m3 de trozos)
+========================================================================
+   [base estacionaria: 358 dias calendario, 307 operativos]
+   Arribos de trozos ........  150.6 m3/dia-cal  ( 175.6 por dia operativo)
+   Procesado aserradero .....  129.0 m3/dia-cal  ( 150.5 por dia operativo)
+   Exceso -> log_yard .......   21.6 m3/dia-cal
+   Pendiente medida log_yard    21.2 m3/dia  => balance CIERRA (consistencia interna OK)
+
+========================================================================
+ (5) CONCENTRACION DE FALLAS
+========================================================================
+    {'aserradero': 69.6, 'bano': 0.8, 'secado': 9.6, 'drymill': 3.6, 'impregnado': 1.2}
+   El aserradero falla 70 veces/año (mas que el resto junto): es la maquina mas exigida.
+
+========================================================================
+ PRODUCCION TERMINADA POR PRODUCTO (media anual de 5 replicas)
+========================================================================
+   P1:   6786.3 m3 en 358 dias  ->    6919.0 m3/año (extrapolado)
+   P2:   9494.9 m3 en 358 dias  ->    9680.5 m3/año (extrapolado)
+   P3:   5449.4 m3 en 358 dias  ->    5556.0 m3/año (extrapolado)
+   TOTAL produccion util: 22155 m3/año
+
+========================================================================
+ PROPUESTA DE MEJORA (atacar la restriccion: aserradero)
+========================================================================
+   Aserradero hoy (% del tiempo total): BUSY=54.0  SETUP=6.4  DOWN=3.7  OFF_SHIFT=35.8  IDLE~0
+
+   Palanca A - Extender operacion del aserradero (hoy 16 h/dia):
+     * Por dia operativo procesa 150 m3 en 16 h; arriban 176 m3/dia operativo.
+     * A 24 h/dia (mismo ritmo): ~226 m3/dia (+75, +50%), supera los 176 m3/dia de arribos y revierte el backlog de 22 m3/dia-cal.
+     * Holgura aguas abajo: secado solo 38% util, drymill 25%, etc. -> pueden absorberlo.
+   Palanca B - Reducir SETUP (6.4% del tiempo): secuenciar/campañas por producto (SMED).
+   Palanca C - Reducir DOWN (3.7%): mant. preventivo sube MTBF (hoy 67 h, el mas bajo).
+
+>> Guardado: C:\Users\Matias Arriagada R\Documents\Universidad\Quinto año universidad\Noveno semestre\Diseño de sistemas de producción\Tareas\parte1\output\figuras\bottleneck_utilizacion.png
+>> Guardado: C:\Users\Matias Arriagada R\Documents\Universidad\Quinto año universidad\Noveno semestre\Diseño de sistemas de producción\Tareas\parte1\output\figuras\bottleneck_wip_balance.png
+
+OK - analisis de cuello de botella completado.
+
+================================================================================
+>>> Ejecutando 00_exploracion.py
+================================================================================
+
+================================================================================
+>>> Ejecutando 01_validacion_fallas.py
+================================================================================
+
+================================================================================
+>>> Ejecutando 01b_diagnostico_overrun.py
+================================================================================
+
+================================================================================
+>>> Ejecutando 01c_resumen_fallas.py
+================================================================================
+
+================================================================================
+>>> Ejecutando 02_warmup.py
+================================================================================
+
+================================================================================
+>>> Ejecutando 03_disponibilidad.py
+================================================================================
+
+================================================================================
+>>> Ejecutando 04_cuello_botella.py
+================================================================================
+
+================================================================================
+TODO OK. Resultados en parte1/output/ (figuras/, tablas/, *.md).
+================================================================================

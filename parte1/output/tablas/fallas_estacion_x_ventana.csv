@@ -1,0 +1,6 @@
+station,EN_TURNO,FUERA_DE_TURNO,DIA_NO_OPERATIVO,TOTAL,tipo
+aserradero,304,41,7,352,turno
+bano,4,0,0,4,turno
+secado,33,10,7,50,24/7
+drymill,18,0,0,18,turno
+impregnado,5,1,0,6,24/7
