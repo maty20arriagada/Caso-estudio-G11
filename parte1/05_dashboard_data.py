@@ -116,6 +116,33 @@ leads_list = [[int(r.replication), r.product, int(r.day), round(float(r.lead_tim
               for r in po2.itertuples(index=False)]
 
 # ----------------------------------------------------------------------
+# (5b) Registros por lote (para t_e, cola, ciclo y distribuciones FP) +
+#      parametros de demanda/capacidad por nodo.
+# ----------------------------------------------------------------------
+ST_IDX = {s: i for i, s in enumerate(U.ALL_STATIONS)}
+PR_IDX = {"P1": 0, "P2": 1, "P3": 2}
+# Horas BUSY por lote (Apunte: "suma de intervalos BUSY"); excluye DOWN dentro
+# del lote. Es el tiempo de PROCESO efectivo (coincide con el Excel del equipo).
+busyb = {}
+for r in events[events["state"] == "BUSY"].itertuples(index=False):
+    k = (r.replication, r.station, r.batch_id)
+    busyb[k] = busyb.get(k, 0.0) + (r.end_time_h - r.start_time_h)
+bb = batches.copy()
+bb["cola"] = (bb["start_process_time_h"] - bb["enter_buffer_time_h"]).clip(lower=0)
+bb["ciclo"] = bb["end_process_time_h"] - bb["enter_buffer_time_h"]   # cola + proceso (wall, incl. DOWN)
+bb["bday"] = (bb["start_process_time_h"] // 24).astype(int).clip(0, 364)
+# [rep, st_idx, pr_idx, day, vol_in, vol_out, setup, proc_busy, cola, ciclo]
+batch_records = []
+for r in bb.itertuples(index=False):
+    proc = busyb.get((r.replication, r.station, r.batch_id),
+                     r.end_process_time_h - r.start_process_time_h)
+    batch_records.append([int(r.replication), ST_IDX[r.station], PR_IDX[r.product], int(r.bday),
+                          round(float(r.volume_in_m3), 3), round(float(r.volume_out_m3), 3),
+                          round(float(r.setup_time_h), 3), round(float(proc), 4),
+                          round(float(r.cola), 4), round(float(r.ciclo), 4)])
+PARAMS = U.load_parametros()
+
+# ----------------------------------------------------------------------
 # (6) Empaquetado diario (listas de 5 arrays, una por replica)
 # ----------------------------------------------------------------------
 def per_rep(fn):  # fn(r) -> array365
@@ -149,6 +176,12 @@ DATA = {
         "stations": U.ALL_STATIONS, "continuous": U.CONTINUOUS_STATIONS,
         "states": U.STATES, "buffers": BUFFERS, "days": DAYS,
         "sankey_links": SANKEY_LINKS, "months": months,
+        "products": ["P1", "P2", "P3"],
+        "warmup_h": round(float(warmup_h), 2),
+        "warmup_apunte_days": int(np.ceil(U.WARMUP_APUNTE_H / 24)),
+        "warmup_inter_days": int(np.ceil(U.WARMUP_INTER_H / 24)),
+        "warmup_welch_days": int(np.ceil(U.WARMUP_WELCH_H / 24)),
+        "parametros": PARAMS,
         "convergencia": CONV, "audit": AUDIT,
         "state_colors": {"BUSY": "#2e7d32", "SETUP": "#8e24aa", "IDLE": "#fbc02d",
                          "BLOCKED": "#e64a19", "DOWN": "#c62828", "OFF_SHIFT": "#b0bec5"},
@@ -157,6 +190,7 @@ DATA = {
     "daily": daily,
     "failures": failures_list,
     "leads": leads_list,
+    "batches": batch_records,
 }
 
 out = U.OUT / "dashboard_data.json"

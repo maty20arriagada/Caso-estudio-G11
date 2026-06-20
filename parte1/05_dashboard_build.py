@@ -2,10 +2,10 @@
 05_dashboard_build.py
 =================================================================
 Genera el dashboard HTML autocontenido (ECharts offline) desde
-output/dashboard_data.json (datos DIARIOS granulares).
-El navegador recalcula todos los KPIs ante el filtro de periodo
-(Año / Mes / Día) y de réplica. Incluye warm-up/convergencia,
-auditoría y caja "cómo se calcula" en cada apartado.
+output/dashboard_data.json (datos diarios + registros por lote).
+El navegador recalcula TODAS las metricas ante los filtros de
+replica, periodo (Año/Mes/Dia), producto, estacion y warm-up.
+Metodologia Factory Physics (Hopp & Spearman) segun Apunte de ideas.
 Salida: output/dashboard.html
 =================================================================
 """
@@ -30,19 +30,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 header.top{background:linear-gradient(135deg,var(--head),var(--head2));color:#fff;padding:20px 26px;border-radius:var(--radius);margin-bottom:var(--gap);box-shadow:0 4px 14px rgba(0,0,0,.12)}
 header.top h1{font-size:21px;font-weight:700}
 header.top .sub{font-size:12.5px;color:#aebfd6;margin-top:3px}
-.controls{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;margin-top:14px}
+.controls{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;margin-top:14px}
 .cg{display:flex;flex-direction:column;gap:3px}
 .cg label{font-size:10.5px;color:#aebfd6;text-transform:uppercase;letter-spacing:.5px}
-.cg select{padding:7px 12px;border-radius:8px;border:1px solid #33445f;background:#0f1a2c;color:#fff;font-size:13px;font-weight:600;cursor:pointer;min-width:120px}
+.cg select{padding:7px 12px;border-radius:8px;border:1px solid #33445f;background:#0f1a2c;color:#fff;font-size:13px;font-weight:600;cursor:pointer;min-width:108px}
 .cg select:disabled{opacity:.45;cursor:not-allowed}
 .periodtag{margin-left:auto;font-size:12px;color:#cdd9ea;background:rgba(255,255,255,.07);padding:7px 12px;border-radius:8px;align-self:flex-end}
 .note{background:#fff;border-left:4px solid var(--accent);border-radius:8px;padding:12px 16px;margin-bottom:var(--gap);font-size:12.8px;color:#475569;box-shadow:0 1px 3px rgba(0,0,0,.05)}
 .warnwin{background:#fff7ed;border-left-color:var(--warn);color:#9a3412}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:var(--gap);margin-bottom:var(--gap)}
-.kpi{background:var(--card);border-radius:var(--radius);padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,.07);border-top:3px solid var(--accent)}
-.kpi .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
-.kpi .val{font-size:25px;font-weight:800;margin-top:5px;line-height:1.1}
-.kpi .ci{font-size:11.5px;color:var(--muted);margin-top:3px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:var(--gap);margin-bottom:var(--gap)}
+.kpi{background:var(--card);border-radius:var(--radius);padding:15px 17px;box-shadow:0 1px 4px rgba(0,0,0,.07);border-top:3px solid var(--accent)}
+.kpi .lbl{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.kpi .val{font-size:24px;font-weight:800;margin-top:5px;line-height:1.1}
+.kpi .ci{font-size:11px;color:var(--muted);margin-top:3px}
 .kpi.red{border-top-color:var(--bad)}.kpi.green{border-top-color:var(--good)}.kpi.amber{border-top-color:var(--warn)}
 .section{margin-bottom:var(--gap)}
 .section h2{font-size:15px;font-weight:700;margin:6px 2px 10px;color:#0f1a2c;display:flex;align-items:center;gap:8px}
@@ -52,6 +52,7 @@ header.top .sub{font-size:12.5px;color:#aebfd6;margin-top:3px}
 .formula .ftitle{font-weight:700;color:var(--accent);font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
 .formula code{display:block;background:#fff;border:1px solid #e1e8f0;border-radius:5px;padding:4px 9px;margin:3px 0;font-family:'Consolas','Courier New',monospace;font-size:12px;color:#0f2c4d;white-space:pre-wrap}
 .formula .mut{color:#64748b;font-size:11.5px;margin-top:6px;font-style:italic}
+.fres{margin-top:6px;font-size:12px;color:#13491a;background:#eef7ee;border:1px solid #cfe3cf;border-radius:5px;padding:5px 9px;font-family:'Consolas','Courier New',monospace;white-space:pre-wrap}
 .grid{display:grid;gap:var(--gap)}
 .g2{grid-template-columns:repeat(auto-fit,minmax(420px,1fr))}
 .g3{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
@@ -67,27 +68,39 @@ header.top .sub{font-size:12.5px;color:#aebfd6;margin-top:3px}
 .audit-badge{flex:none;font-size:10px;font-weight:800;padding:3px 8px;border-radius:20px;color:#fff;margin-top:1px}
 .audit-badge.pass{background:var(--good)}.audit-badge.fail{background:var(--bad)}
 .audit-name{font-weight:600;font-size:12.3px;color:#27364b}.audit-detail{color:var(--muted);font-size:11.2px;margin-top:2px}
-table.dt{width:100%;border-collapse:collapse;font-size:12.5px}
-table.dt th,table.dt td{padding:9px 11px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+table.dt{width:100%;border-collapse:collapse;font-size:12px}
+table.dt th,table.dt td{padding:8px 9px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 table.dt th:first-child,table.dt td:first-child{text-align:left}
-table.dt thead th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.4px;cursor:pointer;user-select:none;border-bottom:2px solid #cfd8e3}
+table.dt thead th{color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;cursor:pointer;user-select:none;border-bottom:2px solid #cfd8e3}
 table.dt tbody tr:hover{background:#f6f9fd}
 table.dt .bn{font-weight:800;color:var(--bad)}
 .footer{color:var(--muted);font-size:11.5px;text-align:center;padding:14px}
 .pill{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px}
 .pill.t247{background:#e8f0fe;color:#1a56c4}.pill.tturno{background:#fff1e6;color:#b85c00}
+.pill-group{display:flex;gap:4px;flex-wrap:wrap;margin-top:1px}
+.spill{padding:4px 9px;border-radius:10px;font-size:10.5px;font-weight:700;cursor:pointer;border:1.5px solid #4a5f7a;color:#cdd9ea;background:transparent;user-select:none;transition:all .12s;line-height:1.4}
+.spill.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.spill:hover{background:#33445f}
+#filterbtn{padding:7px 16px;border-radius:8px;border:none;background:var(--good);color:#fff;font-size:12px;font-weight:700;cursor:pointer;align-self:flex-end;letter-spacing:.3px;line-height:1.4}
+#filterbtn:hover{background:#1b5e20}
+.sup{columns:2;column-gap:26px}.sup li{margin:4px 0;font-size:12.3px;color:#33475e}
+.dstat{font-weight:800}.dstat.ok{color:var(--good)}.dstat.no{color:var(--bad)}
+@media(max-width:760px){.sup{columns:1}}
 </style>
 </head>
 <body>
 <div class="wrap">
 <header class="top">
   <div><h1>Dashboard de Productividad &mdash; Aserradero CMPC Mulch&eacute;n</h1>
-  <div class="sub">Caso de Estudio &middot; Parte 1: disponibilidad, cuello de botella y flujo de material &middot; Dise&ntilde;o de Sistemas de Producci&oacute;n</div></div>
+  <div class="sub">Caso de Estudio &middot; Parte 1 &middot; M&eacute;tricas Factory Physics (Hopp &amp; Spearman, 2008) &middot; Dise&ntilde;o de Sistemas de Producci&oacute;n</div></div>
   <div class="controls">
-    <div class="cg"><label>Vista (r&eacute;plica)</label><select id="repsel"></select></div>
-    <div class="cg"><label>A&ntilde;o</label><select id="yearsel"><option value="1">A&ntilde;o 1</option></select></div>
+    <div class="cg"><label>R&eacute;plica</label><select id="repsel"></select></div>
+    <div class="cg"><label>Producto</label><select id="prodsel"><option value="all">Todos</option><option value="P1">P1</option><option value="P2">P2</option><option value="P3">P3</option></select></div>
+    <div class="cg"><label>Warm-up</label><select id="warmsel"></select></div>
     <div class="cg"><label>Mes</label><select id="monthsel"></select></div>
     <div class="cg"><label>D&iacute;a</label><select id="daysel"><option value="all">Todos</option></select></div>
+    <div class="cg" id="stnfilter-cg"><label>M&aacute;quina</label><div class="pill-group" id="stationpills"></div></div>
+    <button id="filterbtn">Aplicar m&aacute;quinas</button>
     <div class="periodtag" id="periodtag"></div>
   </div>
 </header>
@@ -100,13 +113,12 @@ table.dt .bn{font-weight:800;color:var(--bad)}
 
 <div class="section">
   <h2><span class="tag">Estado estacionario</span> Warm-up: convergencia a r&eacute;gimen</h2>
-  <div class="desc">El sistema arranca vac&iacute;o; los primeros d&iacute;as son un transitorio que se descarta. Cada curva es la salida diaria de una estaci&oacute;n, suavizada y normalizada por su media de r&eacute;gimen (1,0 = r&eacute;gimen). Franja roja = warm-up; banda verde = &plusmn;12%. (Diagn&oacute;stico fijo, no depende del filtro de periodo.)</div>
-  <div class="formula"><div class="ftitle">C&oacute;mo se calcula (Welch)</div>
-    <code>x&#772;_d = media entre r&eacute;plicas de la salida diaria &rarr; media m&oacute;vil de 7 d&iacute;as</code>
-    <code>normalizado = MA(7) / media de r&eacute;gimen (d&iacute;as 150&ndash;364)</code>
-    <code>fin del transitorio = 1.er d&iacute;a con |norm &minus; 1| &le; 12% sostenido 7 d&iacute;as</code>
-    <code>warm-up = m&aacute;x. de los cortes por estaci&oacute;n, redondeado a semana = 14 d</code>
-    <div class="mut">El WIP de log_yard crece sin acotarse (NO estacionario); por eso se usa la salida de cada estaci&oacute;n, no el WIP.</div></div>
+  <div class="desc">El sistema arranca vac&iacute;o; los primeros d&iacute;as son transitorio que se descarta. El warm-up principal es el del <b>Apunte (185,75 h, estabilizaci&oacute;n de batch_volume_m3)</b>; con el selector se compara contra el criterio de Welch (~14 d). Curvas = salida diaria por estaci&oacute;n normalizada por su media de r&eacute;gimen.</div>
+  <div class="formula"><div class="ftitle">C&oacute;mo se calcula</div>
+    <code>Apunte: warm-up = 185,75 h (tama&ntilde;o de lote batch_volume_m3 se normaliza)</code>
+    <code>Welch (ref): MA(7) de la salida; fin del transitorio = 1.er d&iacute;a con |norm-1|&le;12% sostenido 7 d</code>
+    <code>Intervalos que cruzan el corte se recortan (solo cuenta la parte posterior)</code>
+    <div class="mut">El WIP de log_yard NO es estacionario (crece sin acotarse); por eso el warm-up se fija con la salida y el tama&ntilde;o de lote, no con el WIP.</div></div>
   <div class="card"><div id="convchart" class="chart-lg"></div></div>
 </div>
 
@@ -129,10 +141,6 @@ table.dt .bn{font-weight:800;color:var(--bad)}
 <div class="section">
   <h2><span class="tag">Flujo</span> Diagrama de la l&iacute;nea (estados, buffers y WIP)</h2>
   <div class="desc">Topolog&iacute;a del proceso. Estaciones por <b>utilizaci&oacute;n</b> (verde&rarr;rojo), buffers por <b>WIP</b>. Grosor de flecha = flujo. Hover = detalle; se arrastra y hace zoom.</div>
-  <div class="formula"><div class="ftitle">C&oacute;mo se calcula</div>
-    <code>color estaci&oacute;n = utilizaci&oacute;n (BUSY / tiempo programado) en el periodo</code>
-    <code>color buffer = WIP relativo &middot; etiqueta = nivel al fin del periodo</code>
-    <code>ancho de flecha &prop; flujo de material del periodo</code></div>
   <div class="card"><div id="graph" class="chart-flow"></div>
     <div class="legend">
       <span><i style="background:#2e7d32"></i>baja util.</span><span><i style="background:#fbc02d"></i>media</span>
@@ -143,33 +151,59 @@ table.dt .bn{font-weight:800;color:var(--bad)}
 
 <div class="section">
   <h2><span class="tag">Disponibilidad</span> Disponibilidad, utilizaci&oacute;n y confiabilidad</h2>
-  <div class="desc">Indicadores del cuello de botella (gauges) y comparaci&oacute;n entre estaciones, para el periodo seleccionado.</div>
+  <div class="desc">Definiciones <b>Factory Physics (Apunte)</b> como principales; la disponibilidad inherente se incluye como referencia. OFF_SHIFT se excluye de los denominadores.</div>
   <div class="formula"><div class="ftitle">C&oacute;mo se calcula</div>
-    <code>tiempo programado = tiempo total &minus; OFF_SHIFT   (24/7: OFF_SHIFT = 0)</code>
-    <code>Utilizaci&oacute;n = horas BUSY / tiempo programado</code>
-    <code>MTBF = horas BUSY / n&ordm; fallas      (falla dependiente de la operaci&oacute;n)</code>
-    <code>MTTR = media(repair_duration_h)</code>
-    <code>Disponibilidad = MTBF/(MTBF+MTTR) = BUSY/(BUSY+DOWN)</code>
-    <code>OEE = Disponibilidad &times; BUSY/(BUSY+SETUP) &times; Yield</code>
-    <code>Yield = &Sigma; vol_out / &Sigma; vol_in</code>
+    <code>Tiempo requerido = BUSY + DOWN + IDLE + SETUP + BLOCKED   (excluye OFF_SHIFT)</code>
+    <code>Disponibilidad (FP) = (BUSY+IDLE+SETUP+BLOCKED) / (BUSY+IDLE+SETUP+BLOCKED+DOWN)</code>
+    <code>Disponibilidad inherente (ref) = BUSY/(BUSY+DOWN) = MTBF/(MTBF+MTTR)</code>
+    <code>MTBF = horas BUSY / n&ordm; fallas   &middot;   MTTR = media(repair_duration_h)</code>
+    <code>OEE = Disp(FP) &times; BUSY/(BUSY+SETUP) &times; Yield   &middot;   Yield = &Sigma;vol_out/&Sigma;vol_in</code>
+    <div class="fres" id="fres-disp"></div>
     <div class="mut">El yield ~50% del aserradero es recuperaci&oacute;n estructural del aser&iacute;o, no defecto.</div></div>
   <div class="grid g2">
-    <div class="card"><h3>Gauges del cuello de botella (Aserradero)</h3><div class="h3sub">la m&aacute;quina cr&iacute;tica</div><div id="gauges" class="chart"></div></div>
-    <div class="card"><h3>Utilizaci&oacute;n vs Disponibilidad por estaci&oacute;n</h3><div class="h3sub">IC95% en modo Promedio</div><div id="utildisp" class="chart"></div></div>
+    <div class="card"><h3 id="gaugestitle">Gauges del cuello de botella</h3><div class="h3sub">la m&aacute;quina cr&iacute;tica del periodo</div><div id="gauges" class="chart"></div></div>
+    <div class="card"><h3>Utilizaci&oacute;n vs Disponibilidad (FP) por estaci&oacute;n</h3><div class="h3sub">IC95% en modo Promedio &middot; inherente en el tooltip</div><div id="utildisp" class="chart"></div></div>
   </div>
   <div class="card" style="margin-top:var(--gap)"><h3>Composici&oacute;n del tiempo por estado</h3><div class="h3sub">% del tiempo total</div><div id="statecomp" class="chart"></div><div class="legend" id="statelegend"></div></div>
 </div>
 
 <div class="section">
-  <h2><span class="tag">Restricci&oacute;n</span> An&aacute;lisis de cuello de botella</h2>
-  <div class="desc">El cuello de botella es el recurso de mayor utilizaci&oacute;n; aguas arriba se acumula WIP y aguas abajo hay inanici&oacute;n.</div>
-  <div class="formula"><div class="ftitle">C&oacute;mo se calcula</div>
-    <code>cuello = estaci&oacute;n de mayor utilizaci&oacute;n</code>
-    <code>pendiente WIP = ajuste lineal del nivel diario de log_yard en el periodo</code>
-    <code>arribos, procesado = m&sup3;/d&iacute;a (series diarias)</code>
-    <div class="mut">BLOCKED &asymp; 0 &rArr; la restricci&oacute;n est&aacute; en la ENTRADA.</div></div>
+  <h2><span class="tag">Factory Physics</span> Tiempo efectivo y capacidad</h2>
+  <div class="desc">Tiempo efectivo de proceso con detractores (disponibilidad y setup), por estaci&oacute;n (y por producto si se filtra). La capacidad efectiva r_e = 1/t_e.</div>
+  <div class="formula"><div class="ftitle">C&oacute;mo se calcula (Apunte / FP)</div>
+    <code>t_e [h/m&sup3;] = [(&Sigma; horas proceso del producto / &Sigma; vol_in) / Disponibilidad] + [&Sigma; setup / &Sigma; vol_in]</code>
+    <code>capacidad efectiva  r_e = 1 / t_e   [m&sup3;/h]</code>
+    <code>tiempo de proceso por lote = end_process_time_h &minus; start_process_time_h</code>
+    <div class="fres" id="fres-te"></div></div>
   <div class="grid g2">
-    <div class="card"><h3>Ranking de utilizaci&oacute;n</h3><div class="h3sub">identifica la restricci&oacute;n</div><div id="utilrank" class="chart"></div></div>
+    <div class="card"><h3>Tiempo efectivo t_e por estaci&oacute;n</h3><div class="h3sub">h/m&sup3; (barras) y capacidad r_e m&sup3;/h (l&iacute;nea)</div><div id="techart" class="chart"></div></div>
+    <div class="card"><h3>Tiempo de proceso por lote</h3><div class="h3sub">distribuci&oacute;n por estaci&oacute;n (boxplot, h)</div><div id="procbox" class="chart"></div></div>
+  </div>
+</div>
+
+<div class="section">
+  <h2><span class="tag">Factory Physics</span> Tiempo de ciclo (cola + proceso) y WIP</h2>
+  <div class="desc">Tiempo de ciclo por lote = espera en buffer + proceso. La <b>cola enorme del aserradero</b> (patio de trozos que crece) es la firma del cuello de botella.</div>
+  <div class="formula"><div class="ftitle">C&oacute;mo se calcula</div>
+    <code>Tiempo en cola = start_process_time_h &minus; enter_buffer_time_h</code>
+    <code>Tiempo de ciclo = end_process_time_h &minus; enter_buffer_time_h = cola + proceso</code>
+    <div class="fres" id="fres-cycle"></div></div>
+  <div class="grid g2">
+    <div class="card"><h3>Ciclo medio = cola + proceso por estaci&oacute;n</h3><div class="h3sub">horas (barras apiladas)</div><div id="cyclebar" class="chart"></div></div>
+    <div class="card"><h3>Tiempo de ciclo por producto</h3><div class="h3sub">boxplot (h) &middot; caja Q1-Q3, bigotes P5-P95</div><div id="cyclebox" class="chart"></div></div>
+  </div>
+</div>
+
+<div class="section">
+  <h2><span class="tag">Restricci&oacute;n</span> Utilizaci&oacute;n (FP) y cuello de botella</h2>
+  <div class="desc">El cuello de botella es el recurso de mayor utilizaci&oacute;n; aguas arriba se acumula WIP y aguas abajo hay inanici&oacute;n.</div>
+  <div class="formula"><div class="ftitle">C&oacute;mo se calcula (Apunte / FP)</div>
+    <code>Utilizaci&oacute;n (FP) = t_e &times; Demanda / Tiempo_requerido   (Demanda = &Sigma; vol_in del periodo)</code>
+    <code>Utilizaci&oacute;n (operativa, ref) = horas BUSY / Tiempo_requerido</code>
+    <div class="fres" id="fres-util"></div>
+    <div class="mut">BLOCKED &asymp; 0 &rArr; la restricci&oacute;n est&aacute; en la ENTRADA (patio de trozos).</div></div>
+  <div class="grid g2">
+    <div class="card"><h3>Utilizaci&oacute;n FP vs operativa por estaci&oacute;n</h3><div class="h3sub">%</div><div id="utilfp" class="chart"></div></div>
     <div class="card"><h3>WIP por buffer en el tiempo</h3><div class="h3sub">la banda azul marca el periodo filtrado</div><div id="wiptime" class="chart"></div></div>
   </div>
   <div class="card" style="margin-top:var(--gap)"><h3>Arribos de trozos vs capacidad de procesamiento</h3><div class="h3sub">m&sup3;/d&iacute;a</div><div id="arrproc" class="chart"></div></div>
@@ -177,26 +211,26 @@ table.dt .bn{font-weight:800;color:var(--bad)}
 
 <div class="section">
   <h2><span class="tag">Confiabilidad</span> An&aacute;lisis de fallas</h2>
-  <div class="desc">Las fallas ocurren durante el procesamiento. Las "fallas fuera de horario" se explican por estaciones 24/7 y por overrun de lote.</div>
+  <div class="desc">Las fallas ocurren durante el procesamiento. Las "fallas fuera de horario" se explican por estaciones 24/7 y por overrun de lote. (Conteo independiente del filtro de producto.)</div>
   <div class="formula"><div class="ftitle">C&oacute;mo se calcula</div>
-    <code>cada falla se cruza con el calendario (07&ndash;23, d&iacute;a operativo) y el estado real</code>
+    <code>falla v&aacute;lida si la m&aacute;quina estaba BUSY; si estaba OFF_SHIFT se invalida</code>
     <code>overrun = lote iniciado EN turno que cierra pasado el horario (leg&iacute;timo)</code>
-    <code>borde = lote iniciado ~2&ndash;20 min tras el cierre (artefacto)</code>
+    <code>conteo = fallas en el periodo; en Promedio = media de las 5 r&eacute;plicas (decimal)</code>
     <div class="mut">Auditado: 100% de las fallas ocurre con la m&aacute;quina en BUSY.</div></div>
   <div class="grid g3">
-    <div class="card"><h3>Fallas por estaci&oacute;n</h3><div class="h3sub">tasa anual del periodo</div><div id="failstation" class="chart"></div></div>
+    <div class="card"><h3>Fallas por estaci&oacute;n</h3><div class="h3sub">conteo en el periodo</div><div id="failstation" class="chart"></div></div>
     <div class="card"><h3>Clasificaci&oacute;n de fallas</h3><div class="h3sub">dentro/fuera de la ventana operativa</div><div id="failclass" class="chart"></div></div>
     <div class="card"><h3>Distribuci&oacute;n horaria</h3><div class="h3sub">turno vs 24/7 &middot; franja 07&ndash;23</div><div id="failhour" class="chart"></div></div>
   </div>
 </div>
 
 <div class="section">
-  <h2><span class="tag">Producci&oacute;n</span> Producci&oacute;n y tiempos de ciclo</h2>
-  <div class="desc">Volumen terminado por producto (tasa anualizada del periodo) y distribuci&oacute;n del lead time.</div>
+  <h2><span class="tag">Producci&oacute;n</span> Producci&oacute;n y lead time</h2>
+  <div class="desc">Volumen terminado por producto (tasa anualizada del periodo) y distribuci&oacute;n del lead time (extremo a extremo).</div>
   <div class="formula"><div class="ftitle">C&oacute;mo se calcula</div>
-    <code>volumen por producto = &Sigma; product_outputs del periodo, anualizado</code>
-    <code>lead time = exit_time &minus; salida del aserradero (no incluye espera en patio)</code>
-    <code>boxplot = P5 &middot; Q1 &middot; mediana &middot; Q3 &middot; P95</code></div>
+    <code>volumen por producto = &Sigma; product_outputs del periodo &times; 365/(d&iacute;as)</code>
+    <code>lead time = exit_time_h &minus; salida del aserradero (no incluye espera en patio)</code>
+    <div class="fres" id="fres-prod"></div></div>
   <div class="grid g3">
     <div class="card"><h3>Producci&oacute;n por producto</h3><div class="h3sub">m&sup3;/a&ntilde;o (tasa)</div><div id="prodprod" class="chart"></div></div>
     <div class="card"><h3>Throughput diario</h3><div class="h3sub">warm-up y periodo sombreados</div><div id="throughtime" class="chart"></div></div>
@@ -205,11 +239,24 @@ table.dt .bn{font-weight:800;color:var(--bad)}
 </div>
 
 <div class="section">
-  <h2><span class="tag">Detalle</span> Tabla de KPIs por estaci&oacute;n</h2>
+  <h2><span class="tag">Demanda</span> Cumplimiento de demanda por producto</h2>
+  <div class="desc">Producci&oacute;n anualizada vs demanda m&iacute;nima comprometida y capacidad m&aacute;xima de los nodos de destino (puertos/plantas). Cierre de la Parte 1.</div>
   <div class="formula"><div class="ftitle">C&oacute;mo se calcula</div>
-    <code>columnas seg&uacute;n las secciones anteriores &middot; OEE = Disp &times; BUSY/(BUSY+SETUP) &times; Yield</code>
-    <div class="mut">Clic en cualquier encabezado para ordenar.</div></div>
+    <code>demanda m&iacute;n / capacidad por producto = &Sigma; nodos (en miles de m&sup3;) &times; 1000</code>
+    <code>cumple si  demanda_min &le; producci&oacute;n &le; capacidad_max</code>
+    <div class="fres" id="fres-demand"></div>
+    <div class="mut">Unidades de la hoja Par&aacute;metros = miles de m&sup3;/a&ntilde;o. El valor "800" de P3-San Vicente es an&oacute;malo (se usa 0,8).</div></div>
+  <div class="card"><div id="demandchart" class="chart"></div></div>
+</div>
+
+<div class="section">
+  <h2><span class="tag">Detalle</span> Tabla de KPIs por estaci&oacute;n</h2>
   <div class="card" style="overflow-x:auto"><div id="tablewrap"></div></div>
+</div>
+
+<div class="section">
+  <h2><span class="tag">Supuestos</span> Supuestos del an&aacute;lisis</h2>
+  <div class="card"><ul class="sup" id="supuestos"></ul></div>
 </div>
 
 <div class="footer" id="foot"></div>
@@ -218,10 +265,12 @@ table.dt .bn{font-weight:800;color:var(--bad)}
 <script>
 const DATA=__DATA__, META=DATA.meta, D=DATA.daily;
 const SC=META.state_colors, PC=META.product_colors;
-const STATIONS=META.stations, STATES=META.states, BUFFERS=META.buffers, WARM=META.warmup_days, NRE=META.nreps;
+const STATIONS=META.stations, STATES=META.states, BUFFERS=META.buffers, NRE=META.nreps;
+const PRODS=META.products||['P1','P2','P3'], PRI={P1:0,P2:1,P3:2};
+const WELCH_D=(META.convergencia&&META.convergencia.welch_days)||14;
 const TCRIT={1:12.706,2:4.303,3:3.182,4:2.776,5:2.571};
 let CHARTS={}, V=null;
-let curRep='avg', curMonth='all', curDay='all';
+let curRep='avg', curMonth='all', curDay='all', curProduct='all', curStations=null, WARM=META.warmup_days;
 
 const fmt=(x,d=0)=>x==null||isNaN(x)?'-':x.toLocaleString('es-CL',{minimumFractionDigits:d,maximumFractionDigits:d});
 const pct=(x,d=1)=>x==null||isNaN(x)?'-':(x*100).toFixed(d)+'%';
@@ -239,72 +288,116 @@ function mean(v){v=v.filter(x=>x!=null);return v.length?v.reduce((a,b)=>a+b,0)/v
 function pctls(xs){if(!xs.length)return[0,0,0,0,0];xs=xs.slice().sort((a,b)=>a-b);
   const q=p=>{const i=(xs.length-1)*p,lo=Math.floor(i),hi=Math.ceil(i);return xs[lo]+(xs[hi]-xs[lo])*(i-lo);};
   return[q(.05),q(.25),q(.5),q(.75),q(.95)];}
+function stNamesFiltered(){return curStations||STATIONS;}
 
 function curWindow(){
   let d0=0,d1=364;
   if(curMonth!=='all'){const m=META.months[+curMonth-1];d0=m.start;d1=m.end;
     if(curDay!=='all'){d0=m.start+(+curDay-1);d1=d0;}}
-  const raw0=d0; let eff0=d0;
-  if(d1>=WARM) eff0=Math.max(d0,WARM);   // descarta warm-up salvo que toda la ventana este dentro
-  return {d0:eff0,d1,raw0,nWin:Math.max(1,d1-eff0+1),touchesWarm:raw0<WARM};
-}
+  const raw0=d0;let eff0=d0;if(d1>=WARM)eff0=Math.max(d0,WARM);
+  return {d0:eff0,d1,raw0,nWin:Math.max(1,d1-eff0+1),touchesWarm:raw0<WARM};}
+
+function bnOf(list){let b=null,m=-1;list.forEach(n=>{const s=st(n);if(s&&s.util>m){m=s.util;b=n;}});return b||(list.length?list[0]:null);}
 
 function computeView(){
-  const reps=repsList(), W=curWindow(), {d0,d1,nWin}=W, ann=365/nWin;
+  const reps=repsList(),repSet=new Set(reps),W=curWindow(),{d0,d1,nWin}=W,ann=365/nWin;
+  const stnSet=curStations?new Set(curStations):null;
+  // ---- estaciones: estados, disponibilidad (FP e inherente), yield ----
   const stations=STATIONS.map(name=>{
     const cont=META.continuous.includes(name);
     const per=reps.map(r=>{
       const h={};let tot=0;STATES.forEach(s=>{const v=sumWin(D.state[name][s],r,d0,d1);h[s]=v;tot+=v;});
-      const sched=tot-h.OFF_SHIFT, vin=sumWin(D.vin[name],r,d0,d1), vout=sumWin(D.vout[name],r,d0,d1);
-      let nf=0,rep=0;DATA.failures.forEach(f=>{if(f[0]===r&&f[1]===name&&f[2]>=d0&&f[2]<=d1){nf++;rep+=f[5];}});
-      return {h,tot,sched,vin,vout,nf,rep,util:sched>0?h.BUSY/sched:0,
+      const req=tot-h.OFF_SHIFT, vin=sumWin(D.vin[name],r,d0,d1), vout=sumWin(D.vout[name],r,d0,d1);
+      let nf=0,rp=0;DATA.failures.forEach(f=>{if(f[0]===r&&f[1]===name&&f[2]>=d0&&f[2]<=d1){nf++;rp+=f[5];}});
+      return {h,tot,req,vin,vout,nf,rp,
+        util:req>0?h.BUSY/req:0,
         disp:(h.BUSY+h.DOWN)>0?h.BUSY/(h.BUSY+h.DOWN):1,
-        mtbf:nf>0?h.BUSY/nf:null,mttr:nf>0?rep/nf:null,yld:vin>0?vout/vin:null};});
-    const [util,util_ci]=meanCI(per.map(p=>p.util)), [disp,disp_ci]=meanCI(per.map(p=>p.disp));
-    const mtbf=mean(per.map(p=>p.mtbf)), mttr=mean(per.map(p=>p.mttr)), yld=mean(per.map(p=>p.yld));
-    const tb=per.reduce((a,p)=>a+p.h.BUSY,0), ts=per.reduce((a,p)=>a+p.h.SETUP,0);
-    const oee=(disp!=null&&yld!=null)?disp*((tb+ts)>0?tb/(tb+ts):0)*yld:null;
-    const o={station:name,tipo:cont?'24/7':'turno',util,util_ci,disp,disp_ci,mtbf,mttr,'yield':yld,oee,
-      nfail:mean(per.map(p=>p.nf*ann))};
+        disp_fp:req>0?(req-h.DOWN)/req:1,
+        mtbf:nf>0?h.BUSY/nf:null,mttr:nf>0?rp/nf:null,yld:vin>0?vout/vin:null};});
+    const [util,util_ci]=meanCI(per.map(p=>p.util));
+    const [disp_fp,dispfp_ci]=meanCI(per.map(p=>p.disp_fp));
+    const disp=mean(per.map(p=>p.disp));
+    const mtbf=mean(per.map(p=>p.mtbf)),mttr=mean(per.map(p=>p.mttr)),yld=mean(per.map(p=>p.yld));
+    const hs={};STATES.forEach(s=>hs[s]=per.reduce((a,p)=>a+p.h[s],0));
+    const reqTot=per.reduce((a,p)=>a+p.req,0);
+    const tb=hs.BUSY,ts=hs.SETUP;
+    const oee=(disp_fp!=null&&yld!=null)?disp_fp*((tb+ts)>0?tb/(tb+ts):0)*yld:null;
+    const o={station:name,tipo:cont?'24/7':'turno',util,util_ci,disp,disp_fp,disp_fp_ci:dispfp_ci,
+      mtbf,mttr,'yield':yld,oee,nfail:mean(per.map(p=>p.nf)),hsum:hs,reqTot};
     STATES.forEach(s=>o[s]=mean(per.map(p=>p.tot>0?p.h[s]/p.tot*100:0)));
     return o;});
+  // ---- Factory Physics por estacion (y producto) desde registros por lote ----
+  const accS={};STATIONS.forEach(s=>accS[s]={proc:0,setup:0,vin:0,vout:0,cnt:0,cola:0,ciclo:0});
+  const accSP={},cycB={P1:[],P2:[],P3:[]},queB={P1:[],P2:[],P3:[]};
+  for(const b of DATA.batches){
+    if(!repSet.has(b[0]))continue;const day=b[3];if(day<d0||day>d1)continue;
+    const s=STATIONS[b[1]],pr=PRODS[b[2]];
+    if(curProduct!=='all'&&pr!==curProduct)continue;
+    if(stnSet&&!stnSet.has(s))continue;
+    const a=accS[s];a.proc+=b[7];a.setup+=b[6];a.vin+=b[4];a.vout+=b[5];a.cnt++;a.cola+=b[8];a.ciclo+=b[9];
+    const k=s+'|'+pr;(accSP[k]=accSP[k]||{proc:0,setup:0,vin:0,cnt:0});
+    const ap=accSP[k];ap.proc+=b[7];ap.setup+=b[6];ap.vin+=b[4];ap.cnt++;
+    cycB[pr].push(b[9]);queB[pr].push(b[8]);}
+  const fp={byStation:{},byStationProduct:accSP,cycleBox:{},queueBox:{}};
+  STATIONS.forEach(s=>{const a=accS[s],stn=stations.find(x=>x.station===s);
+    const A=Math.max(stn.disp_fp||1,1e-9),req=stn.reqTot||0;
+    const te=a.vin>0?(a.proc/a.vin)/A+a.setup/a.vin:null;
+    fp.byStation[s]={te,re:te?1/te:null,proc_mean:a.cnt?a.proc/a.cnt:null,
+      cola_mean:a.cnt?a.cola/a.cnt:null,ciclo_mean:a.cnt?a.ciclo/a.cnt:null,
+      util_fp:req>0?((a.proc/A)+a.setup)/req:null,util_op:req>0?stn.hsum.BUSY/req:null,
+      cnt:a.cnt,vin:a.vin};});
+  PRODS.forEach(p=>{fp.cycleBox[p]=pctls(cycB[p]);fp.queueBox[p]=pctls(queB[p]);});
+  // ---- sankey ----
   const sankey={};META.sankey_links.forEach(ln=>sankey[ln]=mean(reps.map(r=>sumWin(D.sankey[ln],r,d0,d1)*ann)));
-  const vol={},lead={};['P1','P2','P3'].forEach(p=>{
+  // ---- produccion + lead ----
+  const vol={},lead={};PRODS.forEach(p=>{
     vol[p]=mean(reps.map(r=>sumWin(D.prod[p],r,d0,d1)*ann));
     lead[p]=pctls(DATA.leads.filter(L=>reps.includes(L[0])&&L[1]===p&&L[2]>=d0&&L[2]<=d1).map(L=>L[3]));});
-  const fw=DATA.failures.filter(f=>reps.includes(f[0])&&f[2]>=d0&&f[2]<=d1);
-  const by_station={};STATIONS.forEach(s=>by_station[s]=fw.filter(f=>f[1]===s).length/reps.length*ann);
+  // ---- fallas (nivel estacion; independiente de producto) ----
+  const fw=DATA.failures.filter(f=>reps.includes(f[0])&&f[2]>=d0&&f[2]<=d1&&(!stnSet||stnSet.has(f[1])));
+  const by_station={};STATIONS.forEach(s=>by_station[s]=fw.filter(f=>f[1]===s).length/reps.length);
   const cats={en_turno:0,cont:0,overrun:0,borde:0};fw.forEach(f=>cats[f[4]]++);Object.keys(cats).forEach(k=>cats[k]/=reps.length);
   const ht=Array(24).fill(0),hc=Array(24).fill(0);
   fw.forEach(f=>{const h=Math.floor(f[3])%24;if(META.continuous.includes(f[1]))hc[h]+=1/reps.length;else ht[h]+=1/reps.length;});
-  const failures={by_station,cats,hour_turno:ht,hour_cont:hc,total:fw.length/reps.length*ann};
+  const failures={by_station,cats,hour_turno:ht,hour_cont:hc,total:fw.length/reps.length};
+  // ---- series ----
   const ms=a5=>{const o=Array(365).fill(0);reps.forEach(r=>{for(let d=0;d<365;d++)o[d]+=a5[r][d];});return o.map(x=>x/reps.length);};
   const series={throughput:ms(D.throughput),arrivals:ms(D.arrivals),aserradero_in:ms(D.aserradero_in),wip:{}};
   BUFFERS.forEach(b=>series.wip[b]=ms(D.wip[b]));
-  const ase=stations.find(s=>s.station==='aserradero');
-  const [pt,ptci]=meanCI(reps.map(r=>['P1','P2','P3'].reduce((a,p)=>a+sumWin(D.prod[p],r,d0,d1),0)*ann));
-  const thr=mean(reps.map(r=>sumWin(D.throughput,r,d0,d1)/nWin));
+  // ---- KPIs ----
+  const selSet2=curStations?new Set(curStations):null;
+  let bnName=null,bmax=-1;stations.forEach(o=>{if((!selSet2||selSet2.has(o.station))&&o.util>bmax){bmax=o.util;bnName=o.station;}});
+  if(!bnName)bnName=stations[0].station;const ase=stations.find(s=>s.station===bnName);
+  const prodSel=curProduct==='all'?PRODS:[curProduct];
+  const [pt,ptci]=meanCI(reps.map(r=>prodSel.reduce((a,p)=>a+sumWin(D.prod[p],r,d0,d1),0)*ann));
+  const thr=mean(reps.map(r=>prodSel.reduce((a,p)=>a+sumWin(D.prod[p],r,d0,d1),0)/nWin));
   const ly=series.wip['log_yard'];let sx=0,sy=0,sxy=0,sxx=0,n=0;
   for(let d=d0;d<=d1;d++){sx+=d;sy+=ly[d];sxy+=d*ly[d];sxx+=d*d;n++;}
   const slope=n>1?(n*sxy-sx*sy)/(n*sxx-sx*sx):0;
   const avg=curRep==='avg';
+  const leadKey=curProduct==='all'?'P3':curProduct;
   const kpis={prod_total:pt,prod_total_ci:avg?ptci:0,throughput_dia:thr,
-    util_bottleneck:ase.util,util_bottleneck_ci:avg?ase.util_ci:0,disp_bottleneck:ase.disp,disp_bottleneck_ci:avg?ase.disp_ci:0,
-    yield_bottleneck:ase['yield'],oee_bottleneck:ase.oee,fallas_total:failures.total,
-    logyard_slope:slope,logyard_final:ly[d1],leadtime_p3:lead.P3?lead.P3[2]:null};
-  return {stations,sankey,production:{vol,lead},failures,series,kpis,window:W};
-}
+    util_bottleneck:ase.util,util_bottleneck_ci:avg?ase.util_ci:0,
+    disp_bottleneck:ase.disp_fp,disp_bottleneck_ci:avg?ase.disp_fp_ci:0,
+    yield_bottleneck:ase['yield'],oee_bottleneck:ase.oee,fallas_total:failures.total,bottleneck_name:bnName,
+    te_bottleneck:fp.byStation[bnName]?fp.byStation[bnName].te:null,
+    logyard_slope:slope,logyard_final:ly[d1],leadtime_p3:lead[leadKey]?lead[leadKey][2]:null,leadKey};
+  return {stations,fp,sankey,production:{vol,lead},failures,series,kpis,window:W};}
 
+// ====================== RENDER ======================
 function renderKPIs(){const k=V.kpis,avg=(curRep==='avg');
+  const isF=curStations&&curStations.length<STATIONS.length;
+  const bn=isF?k.bottleneck_name:'Aserradero';const bnC=bn.charAt(0).toUpperCase()+bn.slice(1);
   const cards=[
-   {lbl:'Producci&oacute;n &uacute;til',val:fmt(k.prod_total)+' m&sup3;/a&ntilde;o',ci:avg&&k.prod_total_ci?('&plusmn; '+fmt(k.prod_total_ci)):'tasa anualizada',cls:'green'},
-   {lbl:'Throughput l&iacute;nea',val:fmt(k.throughput_dia,1)+' m&sup3;/d&iacute;a',ci:'salida del sistema',cls:''},
-   {lbl:'Utilizaci&oacute;n cuello (Aserradero)',val:pct(k.util_bottleneck),ci:avg&&k.util_bottleneck_ci?('&plusmn; '+pct(k.util_bottleneck_ci)):'',cls:'red'},
-   {lbl:'Disponibilidad Aserradero',val:pct(k.disp_bottleneck),ci:avg&&k.disp_bottleneck_ci?('&plusmn; '+pct(k.disp_bottleneck_ci)):'',cls:'amber'},
-   {lbl:'OEE Aserradero',val:pct(k.oee_bottleneck),ci:'disp &times; setup &times; yield',cls:'amber'},
-   {lbl:'Fallas',val:fmt(k.fallas_total)+'/a&ntilde;o',ci:'tasa del periodo',cls:'red'},
-   {lbl:'Backlog patio (log_yard)',val:(k.logyard_slope>=0?'+':'')+fmt(k.logyard_slope,1)+' m&sup3;/d&iacute;a',ci:'nivel '+fmt(k.logyard_final)+' m&sup3;',cls:'red'},
-   {lbl:'Lead time P3 (mediana)',val:hrs(k.leadtime_p3),ci:'desde aserradero',cls:''}];
+   {lbl:'Producci&oacute;n '+(curProduct==='all'?'&uacute;til':curProduct),val:fmt(k.prod_total)+' m&sup3;/a&ntilde;o',ci:avg&&k.prod_total_ci?('&plusmn; '+fmt(k.prod_total_ci)):'tasa anualizada',cls:'green'},
+   {lbl:'Throughput '+(curProduct==='all'?'l&iacute;nea':curProduct),val:fmt(k.throughput_dia,1)+' m&sup3;/d&iacute;a',ci:'salida del sistema',cls:''},
+   {lbl:'Utilizaci&oacute;n '+bnC,val:pct(k.util_bottleneck),ci:avg&&k.util_bottleneck_ci?('&plusmn; '+pct(k.util_bottleneck_ci)):'BUSY/requerido',cls:'red'},
+   {lbl:'Disponibilidad FP '+bnC,val:pct(k.disp_bottleneck),ci:avg&&k.disp_bottleneck_ci?('&plusmn; '+pct(k.disp_bottleneck_ci)):'(req-DOWN)/req',cls:'amber'},
+   {lbl:'OEE '+bnC,val:pct(k.oee_bottleneck),ci:'Disp&times;BUSY/(BUSY+SETUP)&times;Yield',cls:'amber'},
+   {lbl:'t_e '+bnC,val:k.te_bottleneck!=null?k.te_bottleneck.toFixed(3)+' h/m&sup3;':'-',ci:'tiempo efectivo',cls:''},
+   {lbl:'Fallas',val:fmt(k.fallas_total,avg?1:0),ci:avg?'prom. 5 r&eacute;plicas':'conteo periodo',cls:'red'},
+   {lbl:'Backlog patio',val:(k.logyard_slope>=0?'+':'')+fmt(k.logyard_slope,1)+' m&sup3;/d',ci:'nivel '+fmt(k.logyard_final)+' m&sup3;',cls:'red'},
+   {lbl:'Lead time '+k.leadKey+' (mediana)',val:hrs(k.leadtime_p3),ci:'extremo a extremo',cls:''}];
   document.getElementById('kpis').innerHTML=cards.map(c=>`<div class="kpi ${c.cls}"><div class="lbl">${c.lbl}</div><div class="val">${c.val}</div><div class="ci">${c.ci||''}</div></div>`).join('');}
 
 function renderSankey(){const ch=initChart('sankey');
@@ -320,10 +413,11 @@ function renderGraph(){const ch=initChart('graph');
   const P={trozos:[0,0],log_yard:[120,0],aserradero:[245,0],stock_aserrado:[365,0],bano:[485,-95],P1:[610,-95],
     secado:[485,95],stock_seco:[605,95],drymill:[725,95],P2:[850,25],stock_drymill:[725,205],impregnado:[850,205],P3:[975,205],Mermas:[250,-180]};
   const nodes=[],wf={};BUFFERS.forEach(b=>wf[b]=V.series.wip[b][V.window.d1]);const mw=Math.max(...BUFFERS.map(b=>wf[b]),1);
-  const tip=s=>`<b>${s.station}</b> (${s.tipo})<br>Utilizaci&oacute;n: <b>${pct(s.util)}</b><br>Disponibilidad: ${pct(s.disp)}<br>MTBF: ${fmt(s.mtbf)} h &middot; MTTR: ${fmt(s.mttr,1)} h<br>Yield: ${pct(s['yield'])} &middot; OEE: ${pct(s.oee)}<br><span style="color:#888">BUSY ${fmt(s.BUSY,0)}% IDLE ${fmt(s.IDLE,0)}% SETUP ${fmt(s.SETUP,0)}% DOWN ${fmt(s.DOWN,0)}% OFF ${fmt(s.OFF_SHIFT,0)}%</span>`;
-  STATIONS.forEach(name=>{const s=st(name);nodes.push({name,x:P[name][0],y:P[name][1],symbol:'roundRect',symbolSize:[78,46],
-    itemStyle:{color:utilColor(s.util),borderColor:'#fff',borderWidth:2},
-    label:{show:true,formatter:`{b}\n${pct(s.util,0)}`,color:'#fff',fontWeight:700,fontSize:11,lineHeight:14},tooltip:{formatter:tip(s)}});});
+  const stnSet=curStations?new Set(curStations):null,isDim=n=>stnSet&&!stnSet.has(n);
+  const tip=s=>`<b>${s.station}</b> (${s.tipo})<br>Utilizaci&oacute;n: <b>${pct(s.util)}</b><br>Disp.FP: ${pct(s.disp_fp)} &middot; inh: ${pct(s.disp)}<br>MTBF: ${fmt(s.mtbf)} h &middot; MTTR: ${fmt(s.mttr,1)} h<br>Yield: ${pct(s['yield'])} &middot; OEE: ${pct(s.oee)}<br><span style="color:#888">BUSY ${fmt(s.BUSY,0)}% IDLE ${fmt(s.IDLE,0)}% SETUP ${fmt(s.SETUP,0)}% DOWN ${fmt(s.DOWN,0)}% OFF ${fmt(s.OFF_SHIFT,0)}%</span>`;
+  STATIONS.forEach(name=>{const s=st(name),dim=isDim(name);nodes.push({name,x:P[name][0],y:P[name][1],symbol:'roundRect',symbolSize:[78,46],
+    itemStyle:{color:dim?'#cfd8dc':utilColor(s.util),borderColor:'#fff',borderWidth:2,opacity:dim?.35:1},
+    label:{show:true,formatter:`{b}\n${pct(s.util,0)}`,color:dim?'#b0bec5':'#fff',fontWeight:700,fontSize:11,lineHeight:14},tooltip:{show:!dim,formatter:tip(s)}});});
   BUFFERS.forEach(b=>{const lvl=wf[b],ht=Math.min(1,lvl/mw);nodes.push({name:b,x:P[b][0],y:P[b][1],symbol:'rect',symbolSize:[58,30],
     itemStyle:{color:`rgb(${Math.round(144+(198-144)*ht)},${Math.round(164-(164-40)*ht)},${Math.round(174-(174-40)*ht)})`,borderColor:'#607d8b',borderWidth:1},
     label:{show:true,formatter:`${b.replace('stock_','').replace('log_yard','patio')}\n${fmt(lvl)} m&sup3;`,color:'#fff',fontSize:9.5,fontWeight:600,lineHeight:12},
@@ -342,44 +436,88 @@ function renderGraph(){const ch=initChart('graph');
   const links=E.map(([s,t,v])=>({source:s,target:t,value:v,lineStyle:{width:w(v),color:(t==='Mermas')?'#cfd8dc':'#90b4d8',opacity:.65,curveness:.05}}));
   ch.setOption({tooltip:{confine:true},series:[{type:'graph',layout:'none',roam:true,edgeSymbol:['none','arrow'],edgeSymbolSize:9,emphasis:{focus:'adjacency',lineStyle:{opacity:.9}},data:nodes,links}]},true);}
 
-function renderGauges(){const ch=initChart('gauges'),s=st('aserradero');
+function renderGauges(){const ch=initChart('gauges');
+  const bn=(curStations&&curStations.length<STATIONS.length)?V.kpis.bottleneck_name:'aserradero',s=st(bn);
+  document.getElementById('gaugestitle').innerHTML='Gauges de '+(bn==='aserradero'?'cuello de botella (Aserradero)':bn.charAt(0).toUpperCase()+bn.slice(1));
   const g=(c,v,n,col)=>({type:'gauge',center:c,radius:'62%',min:0,max:100,startAngle:210,endAngle:-30,
     progress:{show:true,width:10,itemStyle:{color:col}},axisLine:{lineStyle:{width:10,color:[[1,'#e6ebf2']]}},
     axisTick:{show:false},splitLine:{show:false},axisLabel:{show:false},pointer:{show:false},
     title:{offsetCenter:[0,'42%'],fontSize:11,color:'#64748b'},
     detail:{offsetCenter:[0,'2%'],fontSize:19,fontWeight:800,color:'#27364b',formatter:'{value}%'},
     data:[{value:v==null?0:+(v*100).toFixed(1),name:n}]});
-  ch.setOption({series:[g(['16%','55%'],s.disp,'Disponibilidad','#2e7d32'),g(['38%','55%'],s.util,'Utilización','#1565c0'),
+  ch.setOption({series:[g(['16%','55%'],s.disp_fp,'Disp. FP','#2e7d32'),g(['38%','55%'],s.util,'Utilización','#1565c0'),
     g(['62%','55%'],s['yield'],'Yield','#00897b'),g(['85%','55%'],s.oee,'OEE','#ef6c00')]},true);}
 
 function errRender(si){return function(p,api){const ci=api.value(0),lo=api.value(1),hi=api.value(2);
   const off=(si===0?-1:1)*api.size([0,0])[0]*0.21;const p1=api.coord([ci,lo]),p2=api.coord([ci,hi]);p1[0]+=off;p2[0]+=off;
   const hw=5,L=(x1,y1,x2,y2)=>({type:'line',shape:{x1,y1,x2,y2},style:{stroke:'#37474f',lineWidth:1.4}});
   return{type:'group',children:[L(p1[0],p1[1],p2[0],p2[1]),L(p1[0]-hw,p1[1],p1[0]+hw,p1[1]),L(p2[0]-hw,p2[1],p2[0]+hw,p2[1])]};};}
-function renderUtilDisp(){const ch=initChart('utildisp');
-  const util=STATIONS.map(n=>+((st(n).util||0)*100).toFixed(1)),disp=STATIONS.map(n=>+((st(n).disp||0)*100).toFixed(1));
-  const uci=STATIONS.map(n=>(st(n).util_ci||0)*100),dci=STATIONS.map(n=>(st(n).disp_ci||0)*100);
+function renderUtilDisp(){const ch=initChart('utildisp'),show=stNamesFiltered();
+  const util=show.map(n=>+((st(n).util||0)*100).toFixed(1)),disp=show.map(n=>+((st(n).disp_fp||0)*100).toFixed(1));
+  const inh=show.map(n=>st(n).disp);
+  const uci=show.map(n=>(st(n).util_ci||0)*100),dci=show.map(n=>(st(n).disp_fp_ci||0)*100);
   const eb=(arr,ci)=>arr.map((v,i)=>[i,v-ci[i],v+ci[i]]);
-  ch.setOption({tooltip:{trigger:'axis',axisPointer:{type:'shadow'},valueFormatter:v=>v.toFixed(1)+'%'},
-    legend:{data:['Utilización','Disponibilidad'],bottom:0,itemWidth:12,textStyle:{fontSize:11}},grid:{left:42,right:14,top:18,bottom:40},
-    xAxis:{type:'category',data:STATIONS,axisLabel:{fontSize:11}},yAxis:{type:'value',max:100,axisLabel:{formatter:'{value}%'}},
+  ch.setOption({tooltip:{trigger:'axis',axisPointer:{type:'shadow'},formatter:ps=>{const i=ps[0].dataIndex;
+      return `${show[i]}<br>Utilizaci&oacute;n: ${util[i].toFixed(1)}%<br>Disp. FP: ${disp[i].toFixed(1)}%<br>Disp. inherente: ${pct(inh[i])}`;}},
+    legend:{data:['Utilización','Disp. FP'],bottom:0,itemWidth:12,textStyle:{fontSize:11}},grid:{left:42,right:14,top:18,bottom:40},
+    xAxis:{type:'category',data:show,axisLabel:{fontSize:11}},yAxis:{type:'value',max:100,axisLabel:{formatter:'{value}%'}},
     series:[{name:'Utilización',type:'bar',data:util,itemStyle:{color:'#1565c0',borderRadius:[4,4,0,0]}},
-      {name:'Disponibilidad',type:'bar',data:disp,itemStyle:{color:'#2e7d32',borderRadius:[4,4,0,0]}},
+      {name:'Disp. FP',type:'bar',data:disp,itemStyle:{color:'#2e7d32',borderRadius:[4,4,0,0]}},
       {type:'custom',data:eb(util,uci),renderItem:errRender(0),tooltip:{show:false},z:5},
       {type:'custom',data:eb(disp,dci),renderItem:errRender(1),tooltip:{show:false},z:5}]},true);}
 
-function renderStateComp(){const ch=initChart('statecomp');
-  const series=STATES.map(s=>({name:s,type:'bar',stack:'t',emphasis:{focus:'series'},itemStyle:{color:SC[s]},data:STATIONS.map(n=>+(st(n)[s]||0).toFixed(1))}));
+function renderStateComp(){const ch=initChart('statecomp'),show=stNamesFiltered();
+  const series=STATES.map(s=>({name:s,type:'bar',stack:'t',emphasis:{focus:'series'},itemStyle:{color:SC[s]},data:show.map(n=>+(st(n)[s]||0).toFixed(1))}));
   ch.setOption({tooltip:{trigger:'axis',axisPointer:{type:'shadow'},valueFormatter:v=>v.toFixed(1)+'%'},grid:{left:80,right:18,top:12,bottom:18},
-    xAxis:{type:'value',max:100,axisLabel:{formatter:'{value}%'}},yAxis:{type:'category',data:STATIONS,axisLabel:{fontSize:12}},series},true);
+    xAxis:{type:'value',max:100,axisLabel:{formatter:'{value}%'}},yAxis:{type:'category',data:show,axisLabel:{fontSize:12}},series},true);
   document.getElementById('statelegend').innerHTML=STATES.map(s=>`<span><i style="background:${SC[s]}"></i>${s}</span>`).join('');}
 
-function renderUtilRank(){const ch=initChart('utilrank');
-  const arr=STATIONS.map(n=>({n,u:st(n).util||0})).sort((a,b)=>a.u-b.u);
-  ch.setOption({tooltip:{trigger:'axis',axisPointer:{type:'shadow'},valueFormatter:v=>v.toFixed(1)+'%'},grid:{left:80,right:40,top:10,bottom:24},
-    xAxis:{type:'value',max:100,axisLabel:{formatter:'{value}%'}},yAxis:{type:'category',data:arr.map(a=>a.n),axisLabel:{fontSize:12}},
-    series:[{type:'bar',data:arr.map(a=>({value:+(a.u*100).toFixed(1),itemStyle:{color:utilColor(a.u),borderRadius:[0,5,5,0]}})),
-      label:{show:true,position:'right',formatter:p=>p.value+'%',fontWeight:700,fontSize:11}}]},true);}
+function renderTE(){const ch=initChart('techart'),show=stNamesFiltered();
+  const te=show.map(n=>{const f=V.fp.byStation[n];return f&&f.te!=null?+f.te.toFixed(3):0;});
+  const re=show.map(n=>{const f=V.fp.byStation[n];return f&&f.re!=null?+f.re.toFixed(1):0;});
+  ch.setOption({tooltip:{trigger:'axis',axisPointer:{type:'shadow'},formatter:ps=>{const i=ps[0].dataIndex;
+      return `${show[i]}<br>t_e: <b>${te[i].toFixed(3)}</b> h/m&sup3;<br>r_e: ${re[i].toFixed(1)} m&sup3;/h`;}},
+    legend:{data:['t_e (h/m³)','r_e (m³/h)'],bottom:0,itemWidth:12,textStyle:{fontSize:11}},grid:{left:46,right:48,top:14,bottom:40},
+    xAxis:{type:'category',data:show,axisLabel:{fontSize:11}},
+    yAxis:[{type:'value',name:'t_e h/m³',axisLabel:{fontSize:10}},{type:'value',name:'r_e m³/h',position:'right',axisLabel:{fontSize:10}}],
+    series:[{name:'t_e (h/m³)',type:'bar',data:te,itemStyle:{color:'#1565c0',borderRadius:[4,4,0,0]},label:{show:true,position:'top',fontSize:9,formatter:p=>p.value.toFixed(2)}},
+      {name:'r_e (m³/h)',type:'line',yAxisIndex:1,data:re,lineStyle:{color:'#ef6c00',width:2},itemStyle:{color:'#ef6c00'},symbolSize:7}]},true);}
+
+function renderProcBox(){const ch=initChart('procbox'),show=stNamesFiltered();
+  // distribucion del tiempo de proceso por lote (proc) por estacion, desde batches
+  const reps=repsList(),repSet=new Set(reps),W=V.window,stnSet=curStations?new Set(curStations):null;
+  const byS={};show.forEach(s=>byS[s]=[]);
+  for(const b of DATA.batches){if(!repSet.has(b[0]))continue;if(b[3]<W.d0||b[3]>W.d1)continue;
+    const s=STATIONS[b[1]],pr=PRODS[b[2]];if(curProduct!=='all'&&pr!==curProduct)continue;if(stnSet&&!stnSet.has(s))continue;
+    if(byS[s])byS[s].push(b[7]);}
+  const boxes=show.map(s=>pctls(byS[s]));
+  ch.setOption({tooltip:{trigger:'item',formatter:p=>{const d=boxes[p.dataIndex];return `${show[p.dataIndex]}<br>P95 ${fmt(d[4],2)} &middot; Q3 ${fmt(d[3],2)}<br>Mediana <b>${fmt(d[2],2)}</b> h<br>Q1 ${fmt(d[1],2)} &middot; P5 ${fmt(d[0],2)}`;}},
+    grid:{left:42,right:14,top:14,bottom:26},xAxis:{type:'category',data:show,axisLabel:{fontSize:11}},yAxis:{type:'value',name:'h'},
+    series:[{type:'boxplot',data:boxes.map(b=>({value:b,itemStyle:{color:'#1565c022',borderColor:'#1565c0',borderWidth:1.5}}))}]},true);}
+
+function renderCycleBar(){const ch=initChart('cyclebar'),show=stNamesFiltered();
+  const cola=show.map(n=>{const f=V.fp.byStation[n];return f&&f.cola_mean!=null?+f.cola_mean.toFixed(2):0;});
+  const proc=show.map(n=>{const f=V.fp.byStation[n];return f&&f.ciclo_mean!=null?+Math.max(f.ciclo_mean-f.cola_mean,0).toFixed(2):0;});
+  ch.setOption({tooltip:{trigger:'axis',axisPointer:{type:'shadow'},valueFormatter:v=>fmt(v,2)+' h'},
+    legend:{data:['Cola','Proceso'],bottom:0,itemWidth:12,textStyle:{fontSize:11}},grid:{left:50,right:14,top:14,bottom:40},
+    xAxis:{type:'category',data:show,axisLabel:{fontSize:11}},yAxis:{type:'value',name:'h'},
+    series:[{name:'Cola',type:'bar',stack:'c',data:cola,itemStyle:{color:'#ef6c00'}},
+      {name:'Proceso',type:'bar',stack:'c',data:proc,itemStyle:{color:'#2e7d32'}}]},true);}
+
+function renderCycleBox(){const ch=initChart('cyclebox');
+  const ps=curProduct==='all'?PRODS:[curProduct];const boxes=ps.map(p=>V.fp.cycleBox[p]);
+  ch.setOption({tooltip:{trigger:'item',formatter:p=>{const d=boxes[p.dataIndex];return `${ps[p.dataIndex]}<br>P95 ${fmt(d[4],1)} &middot; Q3 ${fmt(d[3],1)}<br>Mediana <b>${fmt(d[2],1)}</b> h<br>Q1 ${fmt(d[1],1)} &middot; P5 ${fmt(d[0],1)}`;}},
+    grid:{left:48,right:14,top:14,bottom:26},xAxis:{type:'category',data:ps},yAxis:{type:'value',name:'h'},
+    series:[{type:'boxplot',data:boxes.map((b,i)=>({value:b,itemStyle:{color:PC[ps[i]]+'55',borderColor:PC[ps[i]],borderWidth:1.6}}))}]},true);}
+
+function renderUtilFP(){const ch=initChart('utilfp'),show=stNamesFiltered();
+  const ufp=show.map(n=>{const f=V.fp.byStation[n];return f&&f.util_fp!=null?+(f.util_fp*100).toFixed(1):0;});
+  const uop=show.map(n=>{const f=V.fp.byStation[n];return f&&f.util_op!=null?+(f.util_op*100).toFixed(1):0;});
+  ch.setOption({tooltip:{trigger:'axis',axisPointer:{type:'shadow'},valueFormatter:v=>v.toFixed(1)+'%'},
+    legend:{data:['Utilización FP','Utilización operativa'],bottom:0,itemWidth:12,textStyle:{fontSize:11}},grid:{left:42,right:14,top:14,bottom:40},
+    xAxis:{type:'category',data:show,axisLabel:{fontSize:11}},yAxis:{type:'value',axisLabel:{formatter:'{value}%'}},
+    series:[{name:'Utilización FP',type:'bar',data:ufp.map(v=>({value:v,itemStyle:{color:utilColor(v/100),borderRadius:[4,4,0,0]}})),label:{show:true,position:'top',fontSize:9,formatter:p=>p.value+'%'}},
+      {name:'Utilización operativa',type:'bar',data:uop,itemStyle:{color:'#90a4ae',borderRadius:[4,4,0,0]}}]},true);}
 
 function winMark(extra){const w=V.window;const data=extra?extra.slice():[];
   if(!(w.d0<=WARM&&w.d1>=364))data.push([{xAxis:w.d0,itemStyle:{color:'rgba(21,101,192,.10)'}},{xAxis:w.d1}]);
@@ -400,11 +538,11 @@ function renderArrProc(){const ch=initChart('arrproc'),days=META.days;
     series:[{name:'Arribos de trozos',type:'line',showSymbol:false,smooth:true,lineStyle:{width:1.4,color:'#ef6c00'},data:V.series.arrivals,markArea:winMark()},
       {name:'Procesado aserradero',type:'line',showSymbol:false,smooth:true,lineStyle:{width:1.4,color:'#2e7d32'},data:V.series.aserradero_in}]},true);}
 
-function renderFailStation(){const ch=initChart('failstation');
-  ch.setOption({tooltip:{trigger:'axis',axisPointer:{type:'shadow'},valueFormatter:v=>fmt(v,1)+'/año'},grid:{left:44,right:14,top:12,bottom:24},
-    xAxis:{type:'category',data:STATIONS,axisLabel:{fontSize:11}},yAxis:{type:'value'},
-    series:[{type:'bar',data:STATIONS.map(n=>({value:+(V.failures.by_station[n]||0).toFixed(1),itemStyle:{color:n==='aserradero'?'#c62828':'#1565c0',borderRadius:[4,4,0,0]}})),
-      label:{show:true,position:'top',fontSize:10,formatter:p=>fmt(p.value,1)}}]},true);}
+function renderFailStation(){const ch=initChart('failstation'),dec=curRep==='avg'?1:0,show=stNamesFiltered();
+  ch.setOption({tooltip:{trigger:'axis',axisPointer:{type:'shadow'},valueFormatter:v=>fmt(v,dec)+' fallas'},grid:{left:44,right:14,top:12,bottom:24},
+    xAxis:{type:'category',data:show,axisLabel:{fontSize:11}},yAxis:{type:'value'},
+    series:[{type:'bar',data:show.map(n=>({value:+(V.failures.by_station[n]||0).toFixed(dec),itemStyle:{color:n==='aserradero'?'#c62828':'#1565c0',borderRadius:[4,4,0,0]}})),
+      label:{show:true,position:'top',fontSize:10,formatter:p=>fmt(p.value,dec)}}]},true);}
 
 function renderFailClass(){const ch=initChart('failclass'),c=V.failures.cats;
   const data=[{name:'En turno (esperable)',value:c.en_turno,itemStyle:{color:'#2e7d32'}},{name:'24/7 continuo (legítimo)',value:c.cont,itemStyle:{color:'#1565c0'}},
@@ -419,7 +557,7 @@ function renderFailHour(){const ch=initChart('failhour'),H=[...Array(24).keys()]
       {name:'24/7',type:'bar',stack:'a',data:V.failures.hour_cont.map(x=>+x.toFixed(2)),itemStyle:{color:'#ef6c00'}}]},true);}
 
 function renderProdProd(){const ch=initChart('prodprod');
-  const data=['P1','P2','P3'].map(p=>({name:p,value:+(V.production.vol[p]||0).toFixed(0),itemStyle:{color:PC[p]}}));
+  const data=PRODS.map(p=>({name:p,value:+(V.production.vol[p]||0).toFixed(0),itemStyle:{color:PC[p]}}));
   ch.setOption({tooltip:{trigger:'item',formatter:p=>`${p.name}<br><b>${fmt(p.value)}</b> m³/año (${p.percent}%)`},legend:{bottom:0,itemWidth:12,textStyle:{fontSize:11}},
     series:[{type:'pie',radius:['45%','70%'],center:['50%','44%'],label:{show:true,formatter:p=>p.name+'\n'+fmt(p.value),fontSize:11,fontWeight:600},data}]},true);}
 
@@ -429,17 +567,33 @@ function renderThroughTime(){const ch=initChart('throughtime'),days=META.days;
     series:[{type:'line',showSymbol:false,smooth:true,data:V.series.throughput,lineStyle:{width:1.4,color:'#1565c0'},areaStyle:{color:'rgba(21,101,192,.10)'},
       markArea:winMark([[{xAxis:0,name:'warm-up',itemStyle:{color:'rgba(198,40,40,.10)'}},{xAxis:WARM}]])}]},true);}
 
-function renderLeadBox(){const ch=initChart('leadbox'),cats=['P1','P2','P3'],boxes=cats.map(p=>V.production.lead[p]);
-  ch.setOption({tooltip:{trigger:'item',formatter:p=>{const d=boxes[p.dataIndex];return `${cats[p.dataIndex]}<br>P95: ${fmt(d[4],1)} h<br>Q3: ${fmt(d[3],1)} h<br>Mediana: <b>${fmt(d[2],1)} h</b><br>Q1: ${fmt(d[1],1)} h<br>P5: ${fmt(d[0],1)} h`;}},
-    grid:{left:46,right:14,top:14,bottom:26},xAxis:{type:'category',data:cats},yAxis:{type:'value',name:'h'},
-    series:[{type:'boxplot',data:boxes.map((b,i)=>({value:b,itemStyle:{color:PC[cats[i]]+'55',borderColor:PC[cats[i]],borderWidth:1.6}}))}]},true);}
+function renderLeadBox(){const ch=initChart('leadbox');const ps=curProduct==='all'?PRODS:[curProduct];const boxes=ps.map(p=>V.production.lead[p]);
+  ch.setOption({tooltip:{trigger:'item',formatter:p=>{const d=boxes[p.dataIndex];return `${ps[p.dataIndex]}<br>P95: ${fmt(d[4],1)} h<br>Q3: ${fmt(d[3],1)} h<br>Mediana: <b>${fmt(d[2],1)} h</b><br>Q1: ${fmt(d[1],1)} h<br>P5: ${fmt(d[0],1)} h`;}},
+    grid:{left:46,right:14,top:14,bottom:26},xAxis:{type:'category',data:ps},yAxis:{type:'value',name:'h'},
+    series:[{type:'boxplot',data:boxes.map((b,i)=>({value:b,itemStyle:{color:PC[ps[i]]+'55',borderColor:PC[ps[i]],borderWidth:1.6}}))}]},true);}
+
+function demandAgg(){const PA=META.parametros;if(!PA||!PA.nodos)return null;const sc=PA.scale_m3||1000;
+  const a={};PA.nodos.forEach(n=>{const p=n.producto;(a[p]=a[p]||{min:0,cap:0});a[p].min+=(n.min_corregido!=null?n.min_corregido:n.min);a[p].cap+=n.cap;});
+  Object.keys(a).forEach(p=>{a[p].min*=sc;a[p].cap*=sc;});return a;}
+function renderDemand(){const ch=initChart('demandchart'),A=demandAgg();if(!A)return;
+  const prod=PRODS.map(p=>+(V.production.vol[p]||0).toFixed(0));
+  const dmin=PRODS.map(p=>A[p]?+A[p].min.toFixed(0):0),dcap=PRODS.map(p=>A[p]?+A[p].cap.toFixed(0):0);
+  ch.setOption({tooltip:{trigger:'axis',axisPointer:{type:'shadow'},formatter:ps=>{const i=ps[0].dataIndex,p=PRODS[i];
+      const ok=prod[i]>=dmin[i]&&prod[i]<=dcap[i];return `${p}<br>Producci&oacute;n: <b>${fmt(prod[i])}</b> m&sup3;/a&ntilde;o<br>Demanda m&iacute;n: ${fmt(dmin[i])}<br>Capacidad m&aacute;x: ${fmt(dcap[i])}<br>${ok?'&#10004; cumple':'&#10007; no cumple'}`;}},
+    legend:{data:['Producci&oacute;n','Demanda m&iacute;n','Capacidad m&aacute;x'],bottom:0,itemWidth:12,textStyle:{fontSize:11}},grid:{left:60,right:16,top:14,bottom:40},
+    xAxis:{type:'category',data:PRODS},yAxis:{type:'value',name:'m³/año'},
+    series:[{name:'Producci&oacute;n',type:'bar',data:prod.map((v,i)=>({value:v,itemStyle:{color:(v>=dmin[i]&&v<=dcap[i])?'#2e7d32':'#c62828',borderRadius:[4,4,0,0]}})),label:{show:true,position:'top',fontSize:10,formatter:p=>fmt(p.value)}},
+      {name:'Demanda m&iacute;n',type:'bar',data:dmin,itemStyle:{color:'#90a4ae'},barGap:'-100%',z:-1},
+      {name:'Capacidad m&aacute;x',type:'scatter',data:dcap,symbol:'rect',symbolSize:[34,3],itemStyle:{color:'#1565c0'}}]},true);}
 
 let sortField='util',sortDir='desc';
-function renderTable(){const cols=[['station','Estación'],['tipo','Tipo'],['util','Utiliz.'],['disp','Disp.'],['oee','OEE'],['mtbf','MTBF (h)'],['mttr','MTTR (h)'],['nfail','Fallas/año'],['yield','Yield']];
-  const rows=[...V.stations].sort((a,b)=>{const x=a[sortField],y=b[sortField];if(typeof x==='string')return sortDir==='asc'?x.localeCompare(y):y.localeCompare(x);
-    return sortDir==='asc'?((x||0)-(y||0)):((y||0)-(x||0));});
+function renderTable(){const fdec=curRep==='avg'?1:0;
+  const cols=[['station','Estación'],['tipo','Tipo'],['util','Utiliz.'],['disp_fp','Disp.FP'],['disp','Disp.inh'],['oee','OEE'],['te','t_e h/m³'],['mtbf','MTBF h'],['mttr','MTTR h'],['nfail','Fallas'],['yield','Yield']];
+  let rows=V.stations.filter(s=>!curStations||curStations.includes(s.station)).map(s=>Object.assign({},s,{te:V.fp.byStation[s.station]?V.fp.byStation[s.station].te:null}));
+  rows.sort((a,b)=>{const x=a[sortField],y=b[sortField];if(typeof x==='string')return sortDir==='asc'?x.localeCompare(y):y.localeCompare(x);return sortDir==='asc'?((x||0)-(y||0)):((y||0)-(x||0));});
   const cell=(r,f)=>{if(f==='station')return `<b>${r.station}</b>`;if(f==='tipo')return `<span class="pill ${r.tipo==='24/7'?'t247':'tturno'}">${r.tipo}</span>`;
-    if(['util','disp','oee','yield'].includes(f))return pct(r[f]);if(f==='mtbf')return fmt(r.mtbf);if(f==='mttr')return fmt(r.mttr,2);if(f==='nfail')return fmt(r.nfail,1);return r[f];};
+    if(['util','disp_fp','disp','oee','yield'].includes(f))return pct(r[f]);if(f==='te')return r.te!=null?r.te.toFixed(3):'-';
+    if(f==='mtbf')return fmt(r.mtbf);if(f==='mttr')return fmt(r.mttr,2);if(f==='nfail')return fmt(r.nfail,fdec);return r[f];};
   let h='<table class="dt"><thead><tr>'+cols.map(c=>`<th data-f="${c[0]}">${c[1]}${sortField===c[0]?(sortDir==='asc'?' &#9650;':' &#9660;'):''}</th>`).join('')+'</tr></thead><tbody>';
   rows.forEach(r=>{const bn=r.station==='aserradero'?' class="bn"':'';h+='<tr>'+cols.map(c=>`<td${c[0]==='station'?bn:''}>${cell(r,c[0])}</td>`).join('')+'</tr>';});
   document.getElementById('tablewrap').innerHTML=h+'</tbody></table>';
@@ -447,51 +601,90 @@ function renderTable(){const cols=[['station','Estación'],['tipo','Tipo'],['uti
 
 function renderConvergencia(){const C=META.convergencia;if(!C||!C.norm)return;const ch=initChart('convchart'),days=C.days;
   const pal={'LINEA (throughput)':'#111','aserradero':'#c62828','bano':'#1565c0','secado':'#ef6c00','drymill':'#6a1b9a','impregnado':'#00897b'};
-  const series=Object.keys(C.norm).map(name=>({name:name+(C.cuts&&C.cuts[name]!=null?` (corte ${C.cuts[name]}d)`:''),type:'line',showSymbol:false,emphasis:{focus:'series'},
+  const stnSet=curStations?new Set(curStations):null;
+  const series=Object.keys(C.norm).filter(name=>name==='LINEA (throughput)'||!stnSet||stnSet.has(name)).map(name=>({name:name+(C.cuts&&C.cuts[name]!=null?` (corte ${C.cuts[name]}d)`:''),type:'line',showSymbol:false,emphasis:{focus:'series'},
     lineStyle:{width:name.indexOf('LINEA')>=0?3:1.4,color:pal[name]||'#888'},data:C.norm[name]}));
-  if(series.length){series[0].markArea={silent:true,itemStyle:{color:'rgba(198,40,40,.10)'},data:[[{xAxis:0,name:'warm-up '+C.warmup_days+' d'},{xAxis:C.warmup_days}]]};
+  if(series.length){series[0].markArea={silent:true,itemStyle:{color:'rgba(198,40,40,.10)'},data:[[{xAxis:0,name:'warm-up '+WARM+' d'},{xAxis:WARM}]]};
     series[0].markLine={silent:true,symbol:'none',lineStyle:{color:'#2e7d32',type:'dotted'},data:[{yAxis:1.12},{yAxis:.88},{yAxis:1}]};}
   ch.setOption({tooltip:{trigger:'axis',valueFormatter:v=>(+v).toFixed(2)},legend:{bottom:0,type:'scroll',textStyle:{fontSize:10},itemWidth:12},
     grid:{left:52,right:18,top:16,bottom:54},xAxis:{type:'category',data:days,name:'día',axisLabel:{fontSize:10}},
     yAxis:{type:'value',name:'salida / media régimen',min:0,max:1.6},dataZoom:[{type:'slider',startValue:0,endValue:90,height:16,bottom:30},{type:'inside'}],series},true);}
 
 function renderAudit(){const A=META.audit,el=document.getElementById('auditwrap');if(!A||!A.checks){el.innerHTML='(sin datos)';return;}
-  el.innerHTML=`<div class="audit-summary">&#10004; ${A.npass}/${A.ntotal} verificaciones de consistencia superadas &middot; warm-up ${A.warmup_days} d</div>`+
+  el.innerHTML=`<div class="audit-summary">&#10004; ${A.npass}/${A.ntotal} verificaciones de consistencia superadas</div>`+
     '<div class="audit-grid">'+A.checks.map(c=>`<div class="audit-item"><span class="audit-badge ${c.status==='PASS'?'pass':'fail'}">${c.status}</span><div><div class="audit-name">${c.name}</div><div class="audit-detail">${c.detail}</div></div></div>`).join('')+'</div>';}
 
-function renderKpiFormula(){document.getElementById('kpiformula').innerHTML='<div class="ftitle">C&oacute;mo se calculan los KPIs (sobre el periodo filtrado)</div>'+
-  '<code>Producci&oacute;n &uacute;til = &Sigma;(P1,P2,P3) del periodo &times; 365/(d&iacute;as) &middot; Throughput = vol terminado / d&iacute;as</code>'+
+function renderKpiFormula(){document.getElementById('kpiformula').innerHTML='<div class="ftitle">C&oacute;mo se calculan los KPIs (sobre el periodo y filtros activos)</div>'+
+  '<code>Producci&oacute;n = &Sigma; product_outputs del periodo &times; 365/(d&iacute;as) &middot; Throughput = vol terminado / d&iacute;as</code>'+
   '<code>Backlog patio = pendiente lineal del nivel de log_yard en el periodo</code>'+
-  '<div class="mut">En modo Promedio se reporta &plusmn; IC95% (t-Student). Las m&eacute;tricas siempre excluyen el warm-up.</div>';}
+  '<div class="mut">En modo Promedio se reporta &plusmn; IC95% (t-Student). Todas las m&eacute;tricas excluyen el warm-up.</div>';}
 
-function updatePeriodUI(){
-  const tag=document.getElementById('periodtag'),warn=document.getElementById('winwarn'),w=V.window;
-  let label;
-  if(curMonth==='all')label=`A&ntilde;o completo &middot; d&iacute;as ${w.d0}&ndash;${w.d1} (post warm-up) &middot; ${w.nWin} d&iacute;as`;
-  else{const m=META.months[+curMonth-1];label=(curDay==='all'?m.name:`${m.name} d&iacute;a ${curDay}`)+` &middot; d&iacute;as ${w.d0}&ndash;${w.d1} &middot; ${w.nWin} d&iacute;a(s)`;}
+function renderFormulaResults(){
+  const bn=V.kpis.bottleneck_name,s=st(bn),f=V.fp.byStation[bn],h=s.hsum;
+  const up=h.BUSY+h.IDLE+h.SETUP+h.BLOCKED, req=up+h.DOWN;
+  const setEl=(id,html)=>{const e=document.getElementById(id);if(e)e.innerHTML=html;};
+  setEl('fres-disp',`&rarr; ${bn}: Disp.FP = (${fmt(up)})/(${fmt(req)}) = <b>${pct(s.disp_fp)}</b>  &middot;  inherente = <b>${pct(s.disp)}</b>  &middot;  OEE = <b>${pct(s.oee)}</b>`);
+  if(f)setEl('fres-te',`&rarr; ${bn}: t_e = <b>${f.te!=null?f.te.toFixed(3):'-'}</b> h/m&sup3;  &middot;  r_e = <b>${f.re!=null?f.re.toFixed(1):'-'}</b> m&sup3;/h  &middot;  proceso medio/lote = ${f.proc_mean!=null?f.proc_mean.toFixed(2):'-'} h`);
+  if(f)setEl('fres-cycle',`&rarr; ${bn}: ciclo medio = cola ${f.cola_mean!=null?fmt(f.cola_mean,1):'-'} h + proceso ${f.proc_mean!=null?fmt(f.proc_mean,2):'-'} h = <b>${f.ciclo_mean!=null?fmt(f.ciclo_mean,1):'-'} h</b>`);
+  if(f)setEl('fres-util',`&rarr; ${bn}: Utilizaci&oacute;n FP = <b>${pct(f.util_fp)}</b>  &middot;  operativa (BUSY/req) = <b>${pct(f.util_op)}</b>`);
+  const k=V.kpis;setEl('fres-prod',`&rarr; ${curProduct==='all'?'Total':curProduct}: <b>${fmt(k.prod_total)}</b> m&sup3;/a&ntilde;o  &middot;  throughput ${fmt(k.throughput_dia,1)} m&sup3;/d&iacute;a`);
+  const A=demandAgg();if(A){const rows=PRODS.map(p=>{const pr=V.production.vol[p]||0,mn=A[p].min,cp=A[p].cap,ok=pr>=mn&&pr<=cp;
+      return `${p}: ${fmt(pr)} vs [${fmt(mn)}, ${fmt(cp)}] <span class="dstat ${ok?'ok':'no'}">${ok?'cumple':'NO'}</span>`;});
+    setEl('fres-demand','&rarr; '+rows.join('  &middot;  '));}}
+
+function renderSupuestos(){const PA=META.parametros||{};
+  const items=[
+    'Warm-up = <b>185,75 h (Apunte, batch_volume_m3)</b>; configurable a 14 d (Welch). Intervalos que cruzan el corte se recortan.',
+    'Fuente principal: <b>station_events.csv</b> (estados reales). failures.csv solo valida fallas/reparaciones.',
+    'OFF_SHIFT se <b>excluye</b> de los denominadores de disponibilidad y utilizaci&oacute;n.',
+    'Fallas dependientes de operaci&oacute;n: v&aacute;lidas si la m&aacute;quina estaba BUSY; en OFF_SHIFT se invalidan (en los datos: 0 inv&aacute;lidas).',
+    'C&aacute;lculo por replication&times;station y luego media &plusmn; IC95% (t-Student) entre 5 r&eacute;plicas.',
+    'Disponibilidad (FP) = (BUSY+IDLE+SETUP+BLOCKED)/(+DOWN); inherente = BUSY/(BUSY+DOWN) (referencia).',
+    'Utilizaci&oacute;n (FP) = t_e &times; Demanda / Tiempo_requerido, con Demanda = &Sigma; vol_in del periodo.',
+    'Tama&ntilde;os t&iacute;picos de lote: aserradero ~30 m&sup3; (yield ~50%), ba&ntilde;o 15, secado 15 (~97%), drymill 14,55/29,10.',
+    'Intervalos sin solape (auditado); suma de estados = 8.760 h por estaci&oacute;n.',
+    'Demanda por nodo en <b>miles de m&sup3;/a&ntilde;o</b>; el valor "800" de P3-San Vicente es an&oacute;malo (se usa 0,8).'];
+  document.getElementById('supuestos').innerHTML=items.map(t=>`<li>${t}</li>`).join('');}
+
+function updatePeriodUI(){const tag=document.getElementById('periodtag'),warn=document.getElementById('winwarn'),w=V.window;
+  let label;if(curMonth==='all')label=`A&ntilde;o &middot; d&iacute;as ${w.d0}&ndash;${w.d1} (post warm-up) &middot; ${w.nWin} d`;
+  else{const m=META.months[+curMonth-1];label=(curDay==='all'?m.name:`${m.name} d&iacute;a ${curDay}`)+` &middot; d&iacute;as ${w.d0}&ndash;${w.d1} &middot; ${w.nWin} d`;}
+  if(curProduct!=='all')label='Producto '+curProduct+' &middot; '+label;
   tag.innerHTML='&#128197; '+label;
-  if(w.nWin<10||w.touchesWarm){warn.style.display='block';
-    warn.innerHTML='&#9888; Ventana corta o solapada con el warm-up: las m&eacute;tricas de confiabilidad (MTBF, disponibilidad) y el lead time pueden ser poco representativos en periodos breves.';}
+  if(w.nWin<10||w.touchesWarm){warn.style.display='block';warn.innerHTML='&#9888; Ventana corta o solapada con el warm-up: las m&eacute;tricas de confiabilidad (MTBF, disponibilidad) y los tiempos pueden ser poco representativos.';}
   else warn.style.display='none';}
 
-function renderAll(){V=computeView();renderKPIs();renderSankey();renderGraph();renderGauges();renderUtilDisp();
-  renderStateComp();renderUtilRank();renderWipTime();renderArrProc();renderFailStation();renderFailClass();
-  renderFailHour();renderProdProd();renderThroughTime();renderLeadBox();renderTable();updatePeriodUI();}
+function renderAll(){V=computeView();
+  renderKPIs();renderSankey();renderGraph();renderGauges();renderUtilDisp();renderStateComp();
+  renderTE();renderProcBox();renderCycleBar();renderCycleBox();renderUtilFP();
+  renderWipTime();renderArrProc();renderFailStation();renderFailClass();renderFailHour();
+  renderProdProd();renderThroughTime();renderLeadBox();renderDemand();renderTable();
+  renderConvergencia();renderFormulaResults();updatePeriodUI();}
 
-(function(){
-  const A=META.audit||{};
-  document.getElementById('methnote').innerHTML=`<b>Metodolog&iacute;a:</b> ${META.nreps} r&eacute;plicas &middot; warm-up <b>${META.warmup_days} d&iacute;as</b> (Welch, auditado) &middot; KPIs emp&iacute;ricos de los logs &middot; filtro de periodo (A&ntilde;o/Mes/D&iacute;a) recalcula todo en el navegador &middot; <b style="color:#2e7d32">auditor&iacute;a ${A.npass||'-'}/${A.ntotal||'-'} PASS</b>.`;
+function renderStationFilter(){const el=document.getElementById('stationpills');
+  el.innerHTML=STATIONS.map(n=>`<span class="spill active" data-station="${n}">${n.charAt(0).toUpperCase()+n.slice(1)}</span>`).join('');
+  el.querySelectorAll('.spill').forEach(p=>p.onclick=()=>p.classList.toggle('active'));}
+function applyStationFilter(){const pills=document.querySelectorAll('#stationpills .spill');const sel=[];
+  pills.forEach(p=>{if(p.classList.contains('active'))sel.push(p.dataset.station);});
+  curStations=(sel.length===STATIONS.length||!sel.length)?null:sel;renderAll();}
+
+(function(){const A=META.audit||{};
+  document.getElementById('methnote').innerHTML=`<b>Metodolog&iacute;a Factory Physics:</b> ${META.nreps} r&eacute;plicas &middot; warm-up <b>185,75 h (Apunte)</b> &middot; m&eacute;tricas emp&iacute;ricas de station_events &middot; filtros (r&eacute;plica/producto/periodo/m&aacute;quina/warm-up) recalculan todo &middot; <b style="color:#2e7d32">auditor&iacute;a ${A.npass||'-'}/${A.ntotal||'-'} PASS</b>.`;
   const rs=document.getElementById('repsel');rs.innerHTML='<option value="avg">Promedio (5 r&eacute;plicas)</option>'+[0,1,2,3,4].map(r=>`<option value="${r}">R&eacute;plica ${r}</option>`).join('');
+  const ws=document.getElementById('warmsel');ws.innerHTML=`<option value="${META.warmup_days}">185,75 h (Apunte)</option><option value="${WELCH_D}">~14 d (Welch)</option>`;
   const msel=document.getElementById('monthsel');msel.innerHTML='<option value="all">Todos</option>'+META.months.map(m=>`<option value="${m.idx}">${m.name}</option>`).join('');
   const dsel=document.getElementById('daysel');
   function fillDays(){if(curMonth==='all'){dsel.innerHTML='<option value="all">Todos</option>';dsel.disabled=true;return;}
     const m=META.months[+curMonth-1];dsel.disabled=false;dsel.innerHTML='<option value="all">Todos</option>'+Array.from({length:m.ndays},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join('');}
   fillDays();
   rs.onchange=()=>{curRep=rs.value;renderAll();};
+  document.getElementById('prodsel').onchange=e=>{curProduct=e.target.value;renderAll();};
+  ws.onchange=()=>{WARM=+ws.value;renderAll();};
   msel.onchange=()=>{curMonth=msel.value;curDay='all';fillDays();renderAll();};
   dsel.onchange=()=>{curDay=dsel.value;renderAll();};
-  document.getElementById('foot').innerHTML='Aserradero CMPC Mulch&eacute;n &middot; Parte 1 &middot; Python + ECharts (offline)';
-  renderKpiFormula();renderConvergencia();renderAudit();renderAll();
+  renderStationFilter();document.getElementById('filterbtn').onclick=applyStationFilter;
+  document.getElementById('foot').innerHTML='Aserradero CMPC Mulch&eacute;n &middot; Parte 1 &middot; Factory Physics (Hopp &amp; Spearman) &middot; Python + ECharts (offline)';
+  renderKpiFormula();renderAudit();renderSupuestos();renderAll();
   window.addEventListener('resize',()=>Object.values(CHARTS).forEach(c=>c.resize()));
 })();
 </script>

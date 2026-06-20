@@ -30,13 +30,13 @@ lo que MTBF/MTTR, yields y capacidades se **estimaron de los datos**.
 - **Ruteo:** P1 `aserradero→baño`; P2 `aserradero→secado→drymill`;
   P3 `aserradero→secado→drymill→impregnado`.
 
-### Warm-up (método de Welch — auditado)
-El sistema arranca vacío. El throughput agregado se estabiliza casi de inmediato, pero la
-auditoría por estación muestra que los nodos de bajo volumen al final de la ruta P3
-(baño día ~11, impregnado día ~12) tardan más en asentar su sobre-impulso inicial. Por eso
-se fija el warm-up por la estación más lenta: se descartan los **primeros 14 días** (336 h)
-para los KPIs estacionarios. El WIP de log_yard crece sin acotarse (NO estacionario) y por
-eso no se usa para el warm-up. → `figuras/warmup_convergencia.png`, `figuras/warmup_welch.png`
+### Warm-up (criterio del Apunte; Welch como referencia)
+El warm-up principal es el del **Apunte de ideas: 185,75 h** (~7,7 d), por estabilización del
+tamaño de lote `batch_volume_m3`; los intervalos que cruzan el corte se recortan. Como
+referencia, el método de Welch (convergencia de la salida por estación; la más lenta es
+impregnado ~día 12) da ~14 d, y el dashboard permite alternar entre ambos. El WIP de log_yard
+crece sin acotarse (NO estacionario) y por eso no se usa para el warm-up.
+→ `figuras/warmup_convergencia.png`, `figuras/warmup_batchvolume.png`, `figuras/warmup_welch.png`
 
 ### Auditoría de consistencia
 Se verifican **11 cruces independientes** (estados, fallas, lotes, buffers, throughput):
@@ -70,29 +70,33 @@ Detalle: `VEREDICTO_fallas.md`, `tablas/fallas_clasificadas.csv`.
 
 ## 3. Disponibilidad, utilización y calidad (media de 5 réplicas)
 
-| Estación | Tipo | Utilización | Disponibilidad | MTBF (h) | MTTR (h) | Fallas/año | Yield |
-|---|---|---:|---:|---:|---:|---:|---:|
-| **aserradero** | turno | **84,1 %** | **93,5 %** | **67** | 4,58 | **70** | **50,0 %** |
-| secado | 24/7 | 37,9 % | 97,7 % | 360 | 7,88 | 9,6 | 97,0 % |
-| drymill | turno | 25,4 % | 99,0 % | 365 | 3,62 | 3,6 | 95,0 % |
-| impregnado | 24/7 | 6,4 % | 98,9 % | 449 | 5,15 | 1,2 | 98,8 % |
-| baño | turno | 5,6 % | 99,4 % | 278 | 1,93 | 0,8 | 98,8 % |
+| Estación | Tipo | Utilización | Disponibilidad | OEE | MTBF (h) | MTTR (h) | Fallas | Yield |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| **aserradero** | turno | **84,2 %** | **93,6 %** | **41,8 %** | **68** | 4,59 | **67,6** | **50,0 %** |
+| secado | 24/7 | 37,8 % | 97,6 % | 85,2 % | 364 | 7,87 | 9,4 | 97,0 % |
+| drymill | turno | 25,3 % | 99,0 % | 76,8 % | 358 | 3,62 | 3,6 | 95,0 % |
+| impregnado | 24/7 | 6,4 % | 98,9 % | 97,7 % | 439 | 5,15 | 1,2 | 98,8 % |
+| baño | turno | 5,6 % | 99,4 % | 98,3 % | 273 | 1,93 | 0,8 | 98,8 % |
 
-Definiciones: Utilización = BUSY/tiempo programado; Disponibilidad = MTBF/(MTBF+MTTR) =
-BUSY/(BUSY+DOWN); MTBF = horas BUSY/nº fallas; Yield = vol_out/vol_in.
+Definiciones **Factory Physics / Apunte** (OFF_SHIFT excluido del denominador; la tabla muestra
+la disponibilidad inherente, el dashboard usa la FP como principal):
+Tiempo requerido = BUSY+DOWN+IDLE+SETUP+BLOCKED; **Disponibilidad (FP)** = (BUSY+IDLE+SETUP+BLOCKED)/(+DOWN);
+disponibilidad inherente (ref) = BUSY/(BUSY+DOWN) = MTBF/(MTBF+MTTR);
+**Utilización (FP)** = t_e × Demanda / Tiempo_requerido, con t_e = (Σ BUSY/Σ vol_in)/Disp + Σsetup/Σvol_in;
+Yield = Σvol_out/Σvol_in. (El dashboard agrega además tiempo de ciclo = cola + proceso y cumplimiento de demanda.)
 
-**Composición del tiempo (% del total):**
+**Composición del tiempo (% del total, período estacionario):**
 
 | Estación | BUSY | SETUP | IDLE | BLOCKED | DOWN | OFF_SHIFT |
 |---|---:|---:|---:|---:|---:|---:|
-| aserradero | 54,0 | 6,4 | **0,0** | 0,0 | 3,7 | 35,8 |
+| aserradero | 54,0 | 6,4 | 0,0 | 0,0 | 3,7 | 35,9 |
 | baño | 3,2 | 0,0 | 54,0 | 0,0 | 0,0 | 42,8 |
-| secado | 37,9 | 4,3 | 56,9 | 0,0 | 0,9 | 0,0 |
-| drymill | 14,7 | 3,3 | 39,8 | 0,0 | 0,1 | 42,1 |
-| impregnado | 6,4 | 0,0 | 93,5 | 0,0 | 0,1 | 0,0 |
+| secado | 37,8 | 4,3 | 57,0 | 0,0 | 0,9 | 0,0 |
+| drymill | 14,7 | 3,3 | 39,8 | 0,0 | 0,2 | 42,1 |
+| impregnado | 6,4 | 0,0 | 93,6 | 0,0 | 0,1 | 0,0 |
 
-- El aserradero es la máquina **más exigida y menos confiable** (MTBF 67 h, 70 fallas/año,
-  disponibilidad 93,5 %) y la única **nunca ociosa** (IDLE 0 %).
+- El aserradero es la máquina **más exigida y menos confiable** (MTBF 68 h, 67,6 fallas,
+  disponibilidad 93,6 %) y la única **nunca ociosa** (IDLE 0 %).
 - El yield del aserradero (≈50 %) es la **principal pérdida de material** (aserrín, lampazos,
   corteza), típico de la recuperación de un aserradero. El resto de etapas conserva >95 %.
 - `BLOCKED ≈ 0` en toda la línea: los buffers intermedios nunca saturan
@@ -107,13 +111,12 @@ Figuras: `composicion_estados.png`, `utilizacion_disponibilidad.png`, `yield_por
 **El cuello de botella es el ASERRADERO**, confirmado por cinco evidencias independientes
 (triangulación, Factory Physics / Teoría de Restricciones):
 
-1. **Utilización 84,1 %**, 2,2× la siguiente estación (secado 37,9 %).
+1. **Utilización 84,2 %**, 2,2× la siguiente estación (secado 37,8 %).
 2. **IDLE 0 %** en el aserradero y **alta inanición aguas abajo** (secado 57 %, drymill 40 %,
    impregnado 94 % ociosos): la línea se hambrea por falta de alimentación.
-3. **WIP en `log_yard` crece sin acotarse**: +21,2 m³/día (86 → 7.733 m³). Aguas abajo el WIP es estacionario.
+3. **WIP en `log_yard` crece sin acotarse**: +21,2 m³/día (252 → 7.733 m³). Aguas abajo el WIP es estacionario.
 4. **Balance arribos vs capacidad** (base estacionaria): llegan **150,6 m³/día-cal** y el aserradero
    procesa **129 m³/día-cal** → exceso de **21,6 m³/día**, que coincide con la pendiente de `log_yard`
-   (consistencia interna).
 5. **Concentración de fallas:** 82 % de todas las fallas ocurren en el aserradero.
 
 `BLOCKED ≈ 0` indica que la restricción está en la **entrada** de la línea, no aguas abajo.
@@ -132,7 +135,7 @@ capacidad efectiva. Aguas abajo hay **holgura amplia** (secado 38 %, drymill 25 
   **~226 m³/día (+50 %)**, superaría los arribos y **revertiría el backlog** de ~22 m³/día.
 - **B. Reducir SETUP (6,4 % del tiempo)** con secuenciación/campañas por producto (SMED):
   el aserradero es la única estación que decide el producto del lote, por lo que cambia mucho.
-- **C. Reducir DOWN (3,7 %) / subir MTBF (hoy 67 h, el más bajo)** con mantenimiento preventivo.
+- **C. Reducir DOWN (3,7 %) / subir MTBF (hoy 68 h, el más bajo)** con mantenimiento preventivo.
 
 Las palancas B y C recuperan ~10 % de capacidad sin nuevas horas; la palanca A es la de mayor impacto.
 

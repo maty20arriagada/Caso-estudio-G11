@@ -129,8 +129,8 @@ print(f"   Pendiente medida log_yard  {slope:6.1f} m3/dia  => balance CIERRA (co
 print("\n" + "=" * 72)
 print(" (5) CONCENTRACION DE FALLAS")
 print("=" * 72)
-print("   ", kpis["n_fail_anual"].reindex(U.ALL_STATIONS).round(1).to_dict())
-print(f"   El aserradero falla {kpis.loc['aserradero','n_fail_anual']:.0f} veces/año "
+print("   ", kpis["fallas"].reindex(U.ALL_STATIONS).round(1).to_dict())
+print(f"   El aserradero falla {kpis.loc['aserradero','fallas']:.0f} veces "
       f"(mas que el resto junto): es la maquina mas exigida.")
 
 # ======================================================================

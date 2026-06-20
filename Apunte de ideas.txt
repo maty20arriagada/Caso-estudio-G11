@@ -1,0 +1,52 @@
+Consideraciones para continuar con los cálculos:
+
+1. Warm-up: el sistema se estabiliza en la hora 185,75, correspondiente a la fila 222 de station_events. Solo se consideran los datos posteriores a ese instante. Considerar desde la hora 199 en adelante. (Esto lo vimos a partir de los batch_volume_m3 debido a que ahí vemos que los números se empiezan a normalizar y quedar con las cosas). Quédate exclusivamente con lo de las instancias y trabajarlas por separadas.
+
+2. Si un evento comienza antes de la hora 185,75 y termina después, se considera únicamente la parte posterior al warm-up. Es decir de los 185,73 en adelante. 
+
+3. Tamaños típicos de lote:
+
+* Aserradero: 30 m3, con rendimiento cercano al 50%.
+* Baño: 15 m3.
+* Secado: 15 m3, con rendimiento cercano al 97%.
+* Drymill: 14,55 m3 o 29,10 m3 cuando se acumulan dos lotes secos del mismo producto. (Ten cuidado porque es como si fueran 2 productos pero se procesan igual)
+* Para los cálculos exactos se debe utilizar el valor de volume_in_m3 de cada lote.
+
+4. No se deben eliminar automáticamente los eventos que ocurren después del horario nominal. Un lote iniciado dentro del turno puede seguir procesándose después de la hora de cierre. Osea los que están fuera de turno dejar una alerta y ahí vemos si los borramos o no.
+
+5. Una falla posterior al cierre es válida si la máquina seguía en estado BUSY. Solo se considera incongruente si la estación estaba en OFF_SHIFT. SI ocurre esto se invalida la falla porque no tiene sentido lógicamente.
+
+6. La fuente principal para los cálculos será station_events.csv, porque muestra los estados reales de las máquinas. failures.csv se utilizará para validar las fallas y reparaciones. Osea de acá depende el cruce fe información y serpa un decisor clave al final.
+
+7. Duración de cada evento:
+   Duración = end_time_h - start_time_h
+
+8. Tiempo efectivo de procesamiento:
+	Disponibilidad = (BUSY + IDLE + SETUP + BLOCKED) / (BUSY + DOWN + IDLE + SETUP + BLOCKED)
+   Tiempo efectivo = [ (suma de las duraciones de todos los intervalos BUSY del mismo producto/suma de los volúmenes de los lotes) /Disponibilidad ] + [ Tiempo de Setup / Tamaño de lote ]. 
+
+Se debe agrupar por replication, station y batch_id.
+
+9. Tiempo de ciclo por lote:
+   Tiempo de ciclo = tiempo en cola + tiempo efectivo
+
+10. Tiempo en cola = enter_buffer_time_ - start_process_time
+
+11. Disponibilidad:
+    Disponibilidad = (BUSY + IDLE + SETUP + BLOCKED) / (BUSY + DOWN + IDLE + SETUP + BLOCKED)
+
+12. No se utilizará días operativos × 16 horas como denominador, porque la jornada puede extenderse cuando un lote sigue en procesamiento o reparación después del cierre.
+
+13. El estado OFF_SHIFT no se incorpora en el denominador de disponibilidad ni de utilización.
+
+14. Todas las métricas se deben calcular primero por replication y station. Después se calcula el promedio y la desviación estándar entre las cinco réplicas.
+
+15. Se debe verificar que los intervalos no se superpongan, para evitar contar dos veces una misma hora.
+
+16. Para cada estación y réplica, el tiempo requerido se calcula como:
+    Tiempo requerido = BUSY + DOWN + IDLE + SETUP + BLOCKED
+
+17. Utilización = (Tiempo efectivo * Demanda) / (BUSY + DOWN + IDLE + SETUP + BLOCKED)
+
+18. Tiempo de ciclo = end_process_time - enter_buffer_time
+

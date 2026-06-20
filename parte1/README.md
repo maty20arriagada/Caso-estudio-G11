@@ -33,7 +33,7 @@ Requisitos: Python 3.11, `pandas`, `numpy`, `matplotlib` (sin dependencias extra
 ## Salidas (`output/`)
 
 - `RESUMEN_PARTE1.md` (en `parte1/`) — informe consolidado.
-- **`output/dashboard.html` — dashboard interactivo** (abrir en el navegador; offline). Filtros de réplica y de periodo (Año/Mes/Día) que recalculan todos los KPIs; secciones de warm-up, auditoría y fórmulas "cómo se calcula".
+- **`output/dashboard.html` — dashboard interactivo** (abrir en el navegador; offline). Métricas Factory Physics (disponibilidad FP, t_e/capacidad, utilización FP, ciclo=cola+proceso); filtros de réplica, **producto**, **máquina**, período (Año/Mes/Día) y **warm-up** que recalculan todo; secciones de warm-up, auditoría, cumplimiento de demanda, supuestos y fórmulas con resultado evaluado.
 - `output/figuras/*.png` — todas las figuras.
 - `output/tablas/*.csv` — KPIs por réplica y resúmenes.
 - `output/VEREDICTO_fallas.md` — conclusión de la validación de fallas.

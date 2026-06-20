@@ -81,13 +81,51 @@ for name in ["bano", "impregnado"]:
     print(f"  {name:11s}", " ".join(f"{norms[name].loc[d]:.2f}" for d in range(0, 21)))
 
 cut_max = max(cuts.values())
-warmup_days = int(np.ceil((cut_max + 1) / 7.0) * 7)
-warmup_days = max(warmup_days, 7)
-U.set_warmup_days(warmup_days)
+welch_days = max(int(np.ceil((cut_max + 1) / 7.0) * 7), 7)   # criterio Welch (referencia)
+
+# --- Estabilizacion de batch_volume_m3 POR REPLICA. El transitorio VARIA entre
+#     replicas y, sobre todo, entre estaciones: las de bajo volumen al final de
+#     la linea (bano, impregnado) tardan mas y son mas dispersas. Por eso el
+#     warm-up NO se fija por replica: se usa UNO solo, conservador, que cubra a
+#     la replica/estacion mas lenta (Welch / Law). ---
+se_bv = U.load("station_events")
+bvb = se_bv[(se_bv["state"] == "BUSY") & (se_bv["batch_volume_m3"] > 0)]
+
+
+def _bvcut(t, v, reg, band=0.15, hold=25):
+    roll = pd.Series(v).rolling(30, min_periods=10).median().values
+    for i in range(len(roll)):
+        seg = roll[i:i + hold]
+        if len(seg) >= hold and np.all(np.abs(seg - reg) <= band * reg):
+            return float(t[i])
+    return None
+
+
+per_rep_bv = {}
+print("\nEstabilizacion de batch_volume_m3 por replica (h) [criterio del Apunte]:")
+for stn in U.ALL_STATIONS:
+    cs = []
+    for r in range(5):
+        d = bvb[(bvb["replication"] == r) & (bvb["station"] == stn)].sort_values("start_time_h")
+        if len(d) < 40:
+            cs.append(None); continue
+        t = d["start_time_h"].to_numpy(); v = d["batch_volume_m3"].to_numpy()
+        cs.append(_bvcut(t, v, float(np.median(v[t > 2000]))))
+    per_rep_bv[stn] = cs
+    print(f"  {stn:11s} " + ", ".join(f"r{r}=" + (f"{c:.0f}" if c else "-") for r, c in enumerate(cs)))
+mx_bv = max([c for cs in per_rep_bv.values() for c in cs if c], default=0.0)
+
+# --- WARM-UP PRINCIPAL adoptado = 216 h (~9 d): cubre la replica/estacion mas
+#     lenta. Apunte (185.75 h) y Welch (14 d) quedan de referencia/seleccionables. ---
+U.set_warmup_hours(U.DEFAULT_WARMUP_H)
+warmup_h = U.warmup_start_h()
+warmup_days = U.get_warmup_days()
 print("-" * 64)
-print(f"Corte mas tardio = dia {cut_max} ({max(cuts, key=cuts.get)})")
-print(f"WARM-UP adoptado (redondeo a semana) = {warmup_days} dias (= {warmup_days*24} h)")
-print(f">> Persistido en {U.WARMUP_FILE}")
+print(f"Maximo transitorio por replica/estacion (batch_volume) = {mx_bv:.0f} h")
+print(f"Welch (ref, salida ensemble): {welch_days} d ({welch_days*24} h)")
+print(f"WARM-UP PRINCIPAL adoptado = {warmup_h:.0f} h (~{warmup_h/24:.1f} d; "
+      f"dia de corte mallas = {warmup_days}); Apunte={U.WARMUP_APUNTE_H} h disponible en el selector.")
+print(f">> Persistido en {U.WARMUP_H_FILE}")
 
 # --- WIP total (referencia de NO estacionariedad) ---
 wip_tot = serie_prom(dwip, "day", "level_m3_mean")
@@ -141,9 +179,38 @@ fig.tight_layout()
 fig.savefig(U.OUT / "figuras" / "warmup_welch.png", dpi=120)
 plt.close(fig)
 
+# ======================================================================
+# Figura 3: estabilizacion de batch_volume_m3 (BASE del corte del Apunte)
+# ======================================================================
+se = U.load("station_events")
+bu = se[(se["state"] == "BUSY") & (se["batch_volume_m3"] > 0)].copy()
+fig, ax = plt.subplots(figsize=(11, 5))
+palb = {"aserradero": "#c62828", "bano": "#1565c0", "secado": "#ef6c00",
+        "drymill": "#6a1b9a", "impregnado": "#00897b"}
+for stn in U.ALL_STATIONS:
+    d = bu[bu["station"] == stn].sort_values("start_time_h")
+    if len(d) < 10:
+        continue
+    yroll = d["batch_volume_m3"].rolling(40, min_periods=10).median().to_numpy()
+    ax.plot(d["start_time_h"].to_numpy(), yroll, color=palb.get(stn, "#777"), lw=1.4, label=stn)
+ax.axvspan(0, warmup_h, color="#c62828", alpha=0.10)
+ax.axvline(U.WARMUP_APUNTE_H, color="#9e9e9e", ls=":", lw=1.3, label=f"Apunte = {U.WARMUP_APUNTE_H:.0f} h")
+ax.axvline(warmup_h, color="#c62828", ls="--", lw=2, label=f"principal = {warmup_h:.0f} h (9 d)")
+ax.axvline(welch_days * 24, color="#2e7d32", ls=":", lw=1.5, label=f"Welch = {welch_days*24} h")
+ax.set_xlim(0, 700)
+ax.set_xlabel("Hora del horizonte (start_time_h)")
+ax.set_ylabel("batch_volume_m3 (mediana movil 40 lotes)")
+ax.set_title("Estabilizacion del tamaño de lote (batch_volume_m3) - base del warm-up del Apunte")
+ax.legend(fontsize=8, ncol=3)
+fig.tight_layout()
+fig.savefig(U.OUT / "figuras" / "warmup_batchvolume.png", dpi=120)
+plt.close(fig)
+print(f">> Guardado: {U.OUT/'figuras'/'warmup_batchvolume.png'}")
+
 # --- Exportar series de convergencia para el dashboard ---
-conv = {"days": days.tolist(), "warmup_days": warmup_days, "cuts": cuts,
-        "norm": {k: [float(x) for x in v.values] for k, v in norms.items()}}
+conv = {"days": days.tolist(), "warmup_days": warmup_days, "warmup_h": warmup_h,
+        "welch_days": welch_days, "apunte_h": U.WARMUP_APUNTE_H, "per_rep_bv": per_rep_bv,
+        "cuts": cuts, "norm": {k: [float(x) for x in v.values] for k, v in norms.items()}}
 import json
 (U.OUT / "warmup_convergencia.json").write_text(json.dumps(conv, ensure_ascii=False), encoding="utf-8")
 

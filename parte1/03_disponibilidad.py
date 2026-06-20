@@ -88,9 +88,21 @@ df = M.reset_index().merge(nfail, on=["replication", "station"], how="left") \
 df["n_fail"] = df["n_fail"].fillna(0)
 
 df["utilizacion"] = df["BUSY"] / df["SCHEDULED"]
+# Disponibilidad inherente = BUSY/(BUSY+DOWN) (secundaria)
 df["disponibilidad"] = np.where(df["BUSY"] + df["DOWN"] > 0,
                                 df["BUSY"] / (df["BUSY"] + df["DOWN"]), np.nan)
+# Disponibilidad operacional (Apunte/FP, principal) = (req - DOWN)/req,
+# req = BUSY+DOWN+IDLE+SETUP+BLOCKED (excluye OFF_SHIFT)
+_req = df[["BUSY", "DOWN", "IDLE", "SETUP", "BLOCKED"]].sum(axis=1)
+df["disponibilidad_fp"] = np.where(_req > 0, (_req - df["DOWN"]) / _req, np.nan)
 df["MTBF_h"] = np.where(df["n_fail"] > 0, df["BUSY"] / df["n_fail"], np.nan)
+# OEE = Disponibilidad(FP) * BUSY/(BUSY+SETUP) * Yield   (alineado al dashboard)
+denom = df["BUSY"] + df["SETUP"]
+df["OEE"] = np.where(
+    (denom > 0) & df["disponibilidad_fp"].notna() & df["yield"].notna(),
+    df["disponibilidad_fp"] * df["BUSY"] / denom * df["yield"],
+    np.nan
+)
 # fracciones de tiempo (sobre total) para composicion
 for s in U.STATES:
     df[f"f_{s}"] = df[s] / df["TOTAL"]
@@ -103,11 +115,11 @@ for st in U.ALL_STATIONS:
     d = df[df["station"] == st]
     rec = {"station": st,
            "tipo": "24/7" if st in U.CONTINUOUS_STATIONS else "turno"}
-    for k in ["utilizacion", "disponibilidad", "MTBF_h", "MTTR_h", "yield"]:
+    for k in ["utilizacion", "disponibilidad", "disponibilidad_fp", "OEE", "MTBF_h", "MTTR_h", "yield"]:
         m, hw = ci95(d[k].dropna())
         rec[k] = m
         rec[k + "_ic"] = hw
-    rec["n_fail_anual"] = d["n_fail"].mean()
+    rec["fallas"] = d["n_fail"].mean()
     for s in U.STATES:
         rec[f"f_{s}"] = d[f"f_{s}"].mean()
     rows.append(rec)
@@ -119,10 +131,10 @@ R = pd.DataFrame(rows).set_index("station").reindex(U.ALL_STATIONS)
 print("\n" + "=" * 72)
 print(" DISPONIBILIDAD / UTILIZACION POR ESTACION (media de 5 replicas)")
 print("=" * 72)
-rep_tab = R[["tipo", "utilizacion", "disponibilidad", "MTBF_h", "MTTR_h",
-             "n_fail_anual", "yield"]].copy()
-rep_tab.columns = ["tipo", "Utiliz.", "Disp.", "MTBF_h", "MTTR_h",
-                   "fallas/año", "Yield"]
+rep_tab = R[["tipo", "utilizacion", "disponibilidad_fp", "disponibilidad", "OEE", "MTBF_h", "MTTR_h",
+             "fallas", "yield"]].copy()
+rep_tab.columns = ["tipo", "Utiliz.", "Disp.FP", "Disp.inh", "OEE", "MTBF_h", "MTTR_h",
+                   "fallas", "Yield"]
 print(rep_tab.round(3).to_string())
 
 print("\nIC95% (semiancho) de utilizacion y disponibilidad:")

@@ -1,6 +1,6 @@
 # Auditoría de consistencia interna — Parte 1
 
-**Resultado: 11/11 verificaciones PASS** · warm-up = 14 días · periodo estacionario [336, 8760] h
+**Resultado: 11/11 verificaciones PASS** · warm-up = 9 días · periodo estacionario [216, 8760] h
 
 | # | Verificación | Estado | Detalle |
 |---|---|---|---|

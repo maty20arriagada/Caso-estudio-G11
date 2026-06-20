@@ -135,27 +135,48 @@ def reps(df):
 
 
 # ----------------------------------------------------------------------
-# Warm-up (periodo de calentamiento) - persistido en disco para que
-# todos los scripts usen el mismo valor detectado por Welch (script 02).
+# Warm-up (periodo de calentamiento). Se almacena en HORAS para soportar
+# el corte del Apunte de ideas (185.75 h, por estabilizacion de
+# batch_volume_m3). warmup_start_h() es la unica fuente de verdad que
+# usan todos los analisis; los intervalos que cruzan el corte se recortan.
 # ----------------------------------------------------------------------
-WARMUP_FILE = OUT / "warmup_days.txt"
+WARMUP_APUNTE_H = 185.75                # Apunte (estabilizacion batch_volume_m3)
+WARMUP_INTER_H = 216.0                  # ~9 d: cubre la replica/estacion mas lenta (bano/impregnado ~210 h)
+WARMUP_WELCH_H = 336.0                  # ~14 d: criterio Welch conservador (salida ensemble)
+DEFAULT_WARMUP_H = WARMUP_INTER_H       # principal adoptado (decision del usuario)
+WARMUP_H_FILE = OUT / "warmup_h.txt"
+WARMUP_FILE = OUT / "warmup_days.txt"   # compatibilidad hacia atras (valor antiguo en dias)
 
 
-def set_warmup_days(n):
-    WARMUP_FILE.write_text(str(int(n)), encoding="utf-8")
+def set_warmup_hours(h):
+    WARMUP_H_FILE.write_text(repr(float(h)), encoding="utf-8")
 
 
-def get_warmup_days(default=0):
+def get_warmup_hours(default=DEFAULT_WARMUP_H):
+    if WARMUP_H_FILE.exists():
+        try:
+            return float(WARMUP_H_FILE.read_text().strip())
+        except ValueError:
+            pass
     if WARMUP_FILE.exists():
         try:
-            return int(WARMUP_FILE.read_text().strip())
+            return int(WARMUP_FILE.read_text().strip()) * HOURS_PER_DAY
         except ValueError:
-            return default
+            pass
     return default
 
 
+def set_warmup_days(n):                  # compatibilidad
+    set_warmup_hours(float(n) * HOURS_PER_DAY)
+
+
+def get_warmup_days(default=0):
+    """Dia de corte para mallas diarias (ceil de las horas de warm-up)."""
+    return int(np.ceil(get_warmup_hours() / HOURS_PER_DAY))
+
+
 def warmup_start_h():
-    return get_warmup_days() * HOURS_PER_DAY
+    return get_warmup_hours()
 
 
 # ----------------------------------------------------------------------
@@ -185,3 +206,35 @@ def state_matrix(events, warmup_h=None):
                        values="dur_h", aggfunc="sum")
          .reindex(columns=STATES).fillna(0.0))
     return m
+
+
+# ----------------------------------------------------------------------
+# Helpers Factory Physics (Hopp & Spearman) - operan sobre state_matrix
+# Convencion del Apunte: OFF_SHIFT se EXCLUYE de los denominadores.
+# ----------------------------------------------------------------------
+REQUIRED_STATES = ["BUSY", "DOWN", "IDLE", "SETUP", "BLOCKED"]   # tiempo requerido (sin OFF_SHIFT)
+AVAIL_UP_STATES = ["BUSY", "IDLE", "SETUP", "BLOCKED"]           # "arriba" (todo salvo DOWN)
+
+
+def required_time(m):
+    """Tiempo requerido = BUSY+DOWN+IDLE+SETUP+BLOCKED (excluye OFF_SHIFT)."""
+    return m[REQUIRED_STATES].sum(axis=1)
+
+
+def availability_fp(m):
+    """Disponibilidad operacional (Apunte/FP) = (req - DOWN)/req."""
+    req = required_time(m)
+    return np.where(req > 0, m[AVAIL_UP_STATES].sum(axis=1) / req, np.nan)
+
+
+def availability_inherent(m):
+    """Disponibilidad inherente = BUSY/(BUSY+DOWN) = MTBF/(MTBF+MTTR)."""
+    den = m["BUSY"] + m["DOWN"]
+    return np.where(den > 0, m["BUSY"] / den, np.nan)
+
+
+def load_parametros():
+    """Parametros de demanda/capacidad por nodo (parametros_demanda.json)."""
+    import json
+    p = BASE / "parte1" / "parametros_demanda.json"
+    return json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
