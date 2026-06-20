@@ -15,6 +15,7 @@ SCRIPTS = [
     "02_warmup.py",             # warm-up (Welch) -> persiste warmup_days.txt
     "03_disponibilidad.py",     # disponibilidad / utilizacion / yield
     "04_cuello_botella.py",     # cuello de botella + mejora
+    "06_auditoria.py",          # auditoria de consistencia interna -> audit.json
     "05_dashboard_data.py",     # calcula metricas para el dashboard -> JSON
     "05_dashboard_build.py",    # genera dashboard.html (ECharts, offline)
 ]

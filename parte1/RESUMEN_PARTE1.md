@@ -30,10 +30,18 @@ lo que MTBF/MTTR, yields y capacidades se **estimaron de los datos**.
 - **Ruteo:** P1 `aserradero→baño`; P2 `aserradero→secado→drymill`;
   P3 `aserradero→secado→drymill→impregnado`.
 
-### Warm-up (método de Welch)
-El sistema arranca vacío. El throughput se estabiliza casi de inmediato (~60 m³/día),
-mientras el WIP total crece sin acotarse (línea saturada). Se descartan los
-**primeros 7 días** (168 h) para los KPIs estacionarios. → `figuras/warmup_welch.png`
+### Warm-up (método de Welch — auditado)
+El sistema arranca vacío. El throughput agregado se estabiliza casi de inmediato, pero la
+auditoría por estación muestra que los nodos de bajo volumen al final de la ruta P3
+(baño día ~11, impregnado día ~12) tardan más en asentar su sobre-impulso inicial. Por eso
+se fija el warm-up por la estación más lenta: se descartan los **primeros 14 días** (336 h)
+para los KPIs estacionarios. El WIP de log_yard crece sin acotarse (NO estacionario) y por
+eso no se usa para el warm-up. → `figuras/warmup_convergencia.png`, `figuras/warmup_welch.png`
+
+### Auditoría de consistencia
+Se verifican **11 cruces independientes** (estados, fallas, lotes, buffers, throughput):
+**11/11 PASS** — p. ej. `DOWN` = suma de reparaciones (Δ=0 h), throughput = salida de la
+última estación (<0,3%), conservación en buffers (Δ≈1e-11). → `output/AUDITORIA.md`
 
 ---
 

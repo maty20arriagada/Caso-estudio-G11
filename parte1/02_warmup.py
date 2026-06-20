@@ -49,17 +49,20 @@ for st in U.ALL_STATIONS:
     series[st] = serie_prom(dthr[dthr["station"] == st], "day", "m3_out")
 
 # --- Deteccion del corte por serie (banda alrededor de la media de regimen) ---
-def cutoff(s_ma):
-    """Fin del transitorio = primer dia en que la serie suavizada (que parte
-    desde el sistema vacio) ALCANZA el 90% de su media de regimen. Las
-    fluctuaciones posteriores son ruido, no warm-up, asi que no se exigen."""
+def cutoff(s_ma, band=0.12, hold=7):
+    """Fin del transitorio = primer dia a partir del cual la serie suavizada
+    se mantiene dentro de +-'band' (12%) de su media de regimen durante al
+    menos 'hold' dias consecutivos. Capta rampa y sobre-impulso inicial, y es
+    robusto al ruido tardio de los nodos de bajo volumen (desviaciones
+    aisladas no cuentan; debe ser una estabilizacion sostenida)."""
     mu = s_ma.loc[150:364].mean()
     if mu <= 0:
         return 0, mu
-    norm = s_ma / mu
-    for d in days:
-        if norm.loc[d] >= 0.90:
-            return int(d), mu
+    a = (s_ma / mu).values
+    for d in range(len(a)):
+        seg = a[d:d + hold]
+        if len(seg) >= hold and np.all(np.abs(seg - 1) <= band):
+            return d, mu
     return int(days[-1]), mu
 
 print("AUDITORIA DEL WARM-UP - convergencia por serie (Welch, MA=7d)")
