@@ -26,10 +26,13 @@ Requisitos: Python 3.11, `pandas`, `numpy`, `matplotlib` (sin dependencias extra
 | `02_warmup.py` | Detección del warm-up (Welch) → persiste `output/warmup_days.txt`. |
 | `03_disponibilidad.py` | Disponibilidad, utilización, MTBF/MTTR, yield, composición de estados. |
 | `04_cuello_botella.py` | Triangulación del cuello de botella + propuesta de mejora. |
+| `05_dashboard_data.py` | Calcula todas las métricas (por réplica + media/IC95%) → `output/dashboard_data.json`. |
+| `05_dashboard_build.py` | Genera `output/dashboard.html` (dashboard interactivo con ECharts, offline). |
 
 ## Salidas (`output/`)
 
 - `RESUMEN_PARTE1.md` (en `parte1/`) — informe consolidado.
+- **`output/dashboard.html` — dashboard interactivo** (abrir en el navegador; funciona offline).
 - `output/figuras/*.png` — todas las figuras.
 - `output/tablas/*.csv` — KPIs por réplica y resúmenes.
 - `output/VEREDICTO_fallas.md` — conclusión de la validación de fallas.
