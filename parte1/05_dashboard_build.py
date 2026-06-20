@@ -19,27 +19,38 @@ TEMPLATE = r'''<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard Productividad - Aserradero CMPC Mulchen (Parte 1)</title>
+<title>Dashboard Productividad — Aserradero CMPC Mulchén (Parte 1)</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E📊%3C/text%3E%3C/svg%3E">
+<meta property="og:title" content="Dashboard Productividad — Aserradero CMPC Mulchén">
+<meta property="og:description" content="Métricas Factory Physics. KPIs, disponibilidad, cuello de botella, y más. Interactivo con ECharts.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#16243b">
 <script>__ECHARTS__</script>
 <style>
 :root{--bg:#eef1f5;--card:#fff;--head:#16243b;--head2:#22344f;--ink:#1d2733;--muted:#64748b;
---line:#e3e8ef;--accent:#1565c0;--good:#2e7d32;--warn:#ef6c00;--bad:#c62828;--gap:16px;--radius:12px;}
+--line:#e3e8ef;--accent:#1565c0;--good:#2e7d32;--warn:#ef6c00;--bad:#c62828;--gap:16px;--radius:12px;
+--shadow-sm:0 1px 3px rgba(0,0,0,.06);--shadow-md:0 4px 14px rgba(0,0,0,.1);--shadow-lg:0 8px 30px rgba(0,0,0,.12);
+--transition:.2s ease;}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;font-size:14px}
+html{scroll-behavior:smooth}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;font-size:14px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 .wrap{max-width:1500px;margin:0 auto;padding:var(--gap)}
-header.top{background:linear-gradient(135deg,var(--head),var(--head2));color:#fff;padding:20px 26px;border-radius:var(--radius);margin-bottom:var(--gap);box-shadow:0 4px 14px rgba(0,0,0,.12)}
-header.top h1{font-size:21px;font-weight:700}
-header.top .sub{font-size:12.5px;color:#aebfd6;margin-top:3px}
+header.top{background:linear-gradient(135deg,var(--head),var(--head2));color:#fff;padding:20px 26px;border-radius:var(--radius);margin-bottom:var(--gap);box-shadow:var(--shadow-md)}
+header.top h1{font-size:22px;font-weight:800;letter-spacing:-.3px}
+header.top .sub{font-size:12.5px;color:#aebfd6;margin-top:3px;opacity:.85}
 .controls{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;margin-top:14px}
 .cg{display:flex;flex-direction:column;gap:3px}
-.cg label{font-size:10.5px;color:#aebfd6;text-transform:uppercase;letter-spacing:.5px}
-.cg select{padding:7px 12px;border-radius:8px;border:1px solid #33445f;background:#0f1a2c;color:#fff;font-size:13px;font-weight:600;cursor:pointer;min-width:108px}
+.cg label{font-size:10.5px;color:#aebfd6;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.cg select{padding:7px 12px;border-radius:8px;border:1px solid #33445f;background:#0f1a2c;color:#fff;font-size:13px;font-weight:600;cursor:pointer;min-width:108px;transition:border var(--transition)}
+.cg select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(21,101,192,.3)}
 .cg select:disabled{opacity:.45;cursor:not-allowed}
-.periodtag{margin-left:auto;font-size:12px;color:#cdd9ea;background:rgba(255,255,255,.07);padding:7px 12px;border-radius:8px;align-self:flex-end}
-.note{background:#fff;border-left:4px solid var(--accent);border-radius:8px;padding:12px 16px;margin-bottom:var(--gap);font-size:12.8px;color:#475569;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.periodtag{margin-left:auto;font-size:12px;color:#cdd9ea;background:rgba(255,255,255,.07);padding:7px 12px;border-radius:8px;align-self:flex-end;backdrop-filter:blur(4px)}
+.note{background:#fff;border-left:4px solid var(--accent);border-radius:8px;padding:12px 16px;margin-bottom:var(--gap);font-size:12.8px;color:#475569;box-shadow:var(--shadow-sm);transition:box-shadow var(--transition)}
+.note:hover{box-shadow:var(--shadow-md)}
 .warnwin{background:#fff7ed;border-left-color:var(--warn);color:#9a3412}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:var(--gap);margin-bottom:var(--gap)}
-.kpi{background:var(--card);border-radius:var(--radius);padding:15px 17px;box-shadow:0 1px 4px rgba(0,0,0,.07);border-top:3px solid var(--accent)}
+.kpi{background:var(--card);border-radius:var(--radius);padding:15px 17px;box-shadow:var(--shadow-sm);border-top:3px solid var(--accent);transition:transform var(--transition),box-shadow var(--transition);cursor:default}
+.kpi:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
 .kpi .lbl{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
 .kpi .val{font-size:24px;font-weight:800;margin-top:5px;line-height:1.1}
 .kpi .ci{font-size:11px;color:var(--muted);margin-top:3px}
@@ -48,15 +59,17 @@ header.top .sub{font-size:12.5px;color:#aebfd6;margin-top:3px}
 .section h2{font-size:15px;font-weight:700;margin:6px 2px 10px;color:#0f1a2c;display:flex;align-items:center;gap:8px}
 .section h2 .tag{font-size:10.5px;font-weight:700;background:#e3edfb;color:var(--accent);padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px}
 .desc{font-size:12.3px;color:var(--muted);margin:0 2px 10px}
-.formula{background:#f3f7fc;border-left:3px solid #90b4d8;border-radius:8px;padding:10px 14px;margin:0 2px 12px;font-size:12px;color:#33475e}
+.formula{background:#f3f7fc;border-left:3px solid #90b4d8;border-radius:8px;padding:10px 14px;margin:0 2px 12px;font-size:12px;color:#33475e;transition:box-shadow var(--transition)}
+.formula:hover{box-shadow:var(--shadow-sm)}
 .formula .ftitle{font-weight:700;color:var(--accent);font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
-.formula code{display:block;background:#fff;border:1px solid #e1e8f0;border-radius:5px;padding:4px 9px;margin:3px 0;font-family:'Consolas','Courier New',monospace;font-size:12px;color:#0f2c4d;white-space:pre-wrap}
+.formula code{display:block;background:#fff;border:1px solid #e1e8f0;border-radius:5px;padding:4px 9px;margin:3px 0;font-family:'SFMono-Regular','Consolas','Liberation Mono',Menlo,monospace;font-size:12px;color:#0f2c4d;white-space:pre-wrap}
 .formula .mut{color:#64748b;font-size:11.5px;margin-top:6px;font-style:italic}
-.fres{margin-top:6px;font-size:12px;color:#13491a;background:#eef7ee;border:1px solid #cfe3cf;border-radius:5px;padding:5px 9px;font-family:'Consolas','Courier New',monospace;white-space:pre-wrap}
+.fres{margin-top:6px;font-size:12px;color:#13491a;background:#eef7ee;border:1px solid #cfe3cf;border-radius:5px;padding:5px 9px;font-family:'SFMono-Regular','Consolas','Liberation Mono',Menlo,monospace;white-space:pre-wrap}
 .grid{display:grid;gap:var(--gap)}
 .g2{grid-template-columns:repeat(auto-fit,minmax(420px,1fr))}
 .g3{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
-.card{background:var(--card);border-radius:var(--radius);padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.card{background:var(--card);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow-sm);transition:box-shadow var(--transition)}
+.card:hover{box-shadow:var(--shadow-md)}
 .card h3{font-size:13px;font-weight:700;margin-bottom:4px;color:#27364b}
 .card .h3sub{font-size:11.5px;color:var(--muted);margin-bottom:8px}
 .chart{width:100%;height:320px}.chart-lg{width:100%;height:430px}.chart-flow{width:100%;height:500px}
@@ -64,7 +77,8 @@ header.top .sub{font-size:12.5px;color:#aebfd6;margin-top:3px}
 .legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 .audit-summary{font-weight:800;color:var(--good);font-size:13.5px;margin-bottom:10px}
 .audit-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:10px}
-.audit-item{display:flex;gap:10px;align-items:flex-start;background:#fbfdff;border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.audit-item{display:flex;gap:10px;align-items:flex-start;background:#fbfdff;border:1px solid var(--line);border-radius:8px;padding:10px 12px;transition:border-color var(--transition),box-shadow var(--transition)}
+.audit-item:hover{border-color:#90b4d8;box-shadow:var(--shadow-sm)}
 .audit-badge{flex:none;font-size:10px;font-weight:800;padding:3px 8px;border-radius:20px;color:#fff;margin-top:1px}
 .audit-badge.pass{background:var(--good)}.audit-badge.fail{background:var(--bad)}
 .audit-name{font-weight:600;font-size:12.3px;color:#27364b}.audit-detail{color:var(--muted);font-size:11.2px;margin-top:2px}
@@ -86,9 +100,24 @@ table.dt .bn{font-weight:800;color:var(--bad)}
 .sup{columns:2;column-gap:26px}.sup li{margin:4px 0;font-size:12.3px;color:#33475e}
 .dstat{font-weight:800}.dstat.ok{color:var(--good)}.dstat.no{color:var(--bad)}
 @media(max-width:760px){.sup{columns:1}}
+@media(max-width:640px){.controls{gap:10px}.cg select{min-width:80px;font-size:12px;padding:6px 8px}
+  header.top h1{font-size:18px}.kpis{grid-template-columns:repeat(2,1fr)}.kpi .val{font-size:18px}
+  .g2,.g3{grid-template-columns:1fr}.chart,.chart-lg,.chart-flow{height:280px!important}
+  .periodtag{margin-left:0;width:100%;text-align:center}}
+@media print{header.top .controls,.spill,#filterbtn,.cg select{display:none!important}
+  .section{break-inside:avoid}.kpi{box-shadow:none!important;border:1px solid #ddd}
+  .formula{border:1px solid #ccc}.card{box-shadow:none!important;border:1px solid #ddd}}
+#loader{position:fixed;top:0;left:0;width:100%;height:3px;background:#e0e0e0;z-index:9999;display:none}
+#loader::after{content:'';display:block;width:33%;height:100%;background:linear-gradient(90deg,var(--accent),var(--good));animation:loadSlide 1s ease-in-out infinite;border-radius:2px}
+@keyframes loadSlide{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}
+#backtotop{position:fixed;bottom:24px;right:24px;width:44px;height:44px;border-radius:50%;background:var(--head);color:#fff;border:none;font-size:20px;cursor:pointer;box-shadow:var(--shadow-md);opacity:0;transform:translateY(16px);transition:all var(--transition);z-index:1000}
+#backtotop.show{opacity:1;transform:translateY(0)}
+#backtotop:hover{background:var(--accent);transform:translateY(-2px);box-shadow:var(--shadow-lg)}
 </style>
 </head>
 <body>
+<div id="loader"></div>
+<button id="backtotop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Volver arriba">&#8593;</button>
 <div class="wrap">
 <header class="top">
   <div><h1>Dashboard de Productividad &mdash; Aserradero CMPC Mulch&eacute;n</h1>
@@ -279,7 +308,10 @@ function utilColor(u){u=Math.max(0,Math.min(1,u));const s=[[0,[46,125,50]],[.5,[
   let a=s[0],b=s[2];for(let i=0;i<s.length-1;i++){if(u>=s[i][0]&&u<=s[i+1][0]){a=s[i];b=s[i+1];break;}}
   const t=(u-a[0])/((b[0]-a[0])||1);const c=a[1].map((v,i)=>Math.round(v+(b[1][i]-v)*t));return `rgb(${c[0]},${c[1]},${c[2]})`;}
 function st(n){return V.stations.find(s=>s.station===n);}
-function initChart(id){if(!CHARTS[id])CHARTS[id]=echarts.init(document.getElementById(id));return CHARTS[id];}
+function initChart(id){if(!CHARTS[id]){const el=document.getElementById(id);
+  CHARTS[id]=echarts.init(el,null,{renderer:'canvas'});
+  el.style.opacity='0';el.style.transition='opacity .7s ease';setTimeout(()=>el.style.opacity='1',80);}
+  return CHARTS[id];}
 function repsList(){return curRep==='avg'?[0,1,2,3,4]:[+curRep];}
 function sumWin(a5,r,d0,d1){let s=0;const a=a5[r];for(let d=d0;d<=d1;d++)s+=a[d];return s;}
 function meanCI(v){const n=v.length;if(!n)return[null,0];const m=v.reduce((a,b)=>a+b,0)/n;
@@ -405,7 +437,7 @@ function renderSankey(){const ch=initChart('sankey');
   const names=['trozos','aserradero','bano','secado','drymill','impregnado','Mermas','P1','P2','P3'];
   const nodes=names.map(n=>({name:n,itemStyle:{color:nc[n]||'#888'}}));
   const links=META.sankey_links.map(key=>{const[s,t]=key.split('>');return{source:s,target:t,value:Math.max(0,V.sankey[key]||0)};});
-  ch.setOption({tooltip:{trigger:'item',triggerOn:'mousemove',formatter:p=>p.dataType==='edge'?`${p.data.source} &rarr; ${p.data.target}<br><b>${fmt(p.data.value)}</b> m&sup3;/a&ntilde;o`:`<b>${p.name}</b>`},
+  ch.setOption({animationDuration:700,animationEasing:'cubicOut',tooltip:{trigger:'item',triggerOn:'mousemove',formatter:p=>p.dataType==='edge'?`${p.data.source} &rarr; ${p.data.target}<br><b>${fmt(p.data.value)}</b> m&sup3;/a&ntilde;o`:`<b>${p.name}</b>`},
     series:[{type:'sankey',left:'4%',right:'9%',top:'3%',bottom:'3%',nodeWidth:16,nodeGap:14,emphasis:{focus:'adjacency'},
       lineStyle:{color:'gradient',opacity:.45,curveness:.5},label:{fontSize:12,fontWeight:600,color:'#27364b'},data:nodes,links}]},true);}
 
@@ -434,7 +466,7 @@ function renderGraph(){const ch=initChart('graph');
     ['aserradero','Mermas',sl['aserradero>Mermas']],['bano','Mermas',sl['bano>Mermas']],
     ['secado','Mermas',sl['secado>Mermas']],['drymill','Mermas',sl['drymill>Mermas']],['impregnado','Mermas',sl['impregnado>Mermas']]];
   const links=E.map(([s,t,v])=>({source:s,target:t,value:v,lineStyle:{width:w(v),color:(t==='Mermas')?'#cfd8dc':'#90b4d8',opacity:.65,curveness:.05}}));
-  ch.setOption({tooltip:{confine:true},series:[{type:'graph',layout:'none',roam:true,edgeSymbol:['none','arrow'],edgeSymbolSize:9,emphasis:{focus:'adjacency',lineStyle:{opacity:.9}},data:nodes,links}]},true);}
+  ch.setOption({animationDuration:700,animationEasing:'cubicOut',tooltip:{confine:true},series:[{type:'graph',layout:'none',roam:true,edgeSymbol:['none','arrow'],edgeSymbolSize:9,emphasis:{focus:'adjacency',lineStyle:{opacity:.9}},data:nodes,links}]},true);}
 
 function renderGauges(){const ch=initChart('gauges');
   const bn=(curStations&&curStations.length<STATIONS.length)?V.kpis.bottleneck_name:'aserradero',s=st(bn);
@@ -445,7 +477,7 @@ function renderGauges(){const ch=initChart('gauges');
     title:{offsetCenter:[0,'42%'],fontSize:11,color:'#64748b'},
     detail:{offsetCenter:[0,'2%'],fontSize:19,fontWeight:800,color:'#27364b',formatter:'{value}%'},
     data:[{value:v==null?0:+(v*100).toFixed(1),name:n}]});
-  ch.setOption({series:[g(['16%','55%'],s.disp_fp,'Disp. FP','#2e7d32'),g(['38%','55%'],s.util,'Utilización','#1565c0'),
+  ch.setOption({animationDuration:700,animationEasing:'cubicOut',series:[g(['16%','55%'],s.disp_fp,'Disp. FP','#2e7d32'),g(['38%','55%'],s.util,'Utilización','#1565c0'),
     g(['62%','55%'],s['yield'],'Yield','#00897b'),g(['85%','55%'],s.oee,'OEE','#ef6c00')]},true);}
 
 function errRender(si){return function(p,api){const ci=api.value(0),lo=api.value(1),hi=api.value(2);
@@ -457,7 +489,7 @@ function renderUtilDisp(){const ch=initChart('utildisp'),show=stNamesFiltered();
   const inh=show.map(n=>st(n).disp);
   const uci=show.map(n=>(st(n).util_ci||0)*100),dci=show.map(n=>(st(n).disp_fp_ci||0)*100);
   const eb=(arr,ci)=>arr.map((v,i)=>[i,v-ci[i],v+ci[i]]);
-  ch.setOption({tooltip:{trigger:'axis',axisPointer:{type:'shadow'},formatter:ps=>{const i=ps[0].dataIndex;
+  ch.setOption({animationDuration:700,animationEasing:'cubicOut',tooltip:{trigger:'axis',axisPointer:{type:'shadow'},formatter:ps=>{const i=ps[0].dataIndex;
       return `${show[i]}<br>Utilizaci&oacute;n: ${util[i].toFixed(1)}%<br>Disp. FP: ${disp[i].toFixed(1)}%<br>Disp. inherente: ${pct(inh[i])}`;}},
     legend:{data:['Utilización','Disp. FP'],bottom:0,itemWidth:12,textStyle:{fontSize:11}},grid:{left:42,right:14,top:18,bottom:40},
     xAxis:{type:'category',data:show,axisLabel:{fontSize:11}},yAxis:{type:'value',max:100,axisLabel:{formatter:'{value}%'}},
@@ -468,14 +500,14 @@ function renderUtilDisp(){const ch=initChart('utildisp'),show=stNamesFiltered();
 
 function renderStateComp(){const ch=initChart('statecomp'),show=stNamesFiltered();
   const series=STATES.map(s=>({name:s,type:'bar',stack:'t',emphasis:{focus:'series'},itemStyle:{color:SC[s]},data:show.map(n=>+(st(n)[s]||0).toFixed(1))}));
-  ch.setOption({tooltip:{trigger:'axis',axisPointer:{type:'shadow'},valueFormatter:v=>v.toFixed(1)+'%'},grid:{left:80,right:18,top:12,bottom:18},
+  ch.setOption({animationDuration:700,animationEasing:'cubicOut',tooltip:{trigger:'axis',axisPointer:{type:'shadow'},valueFormatter:v=>v.toFixed(1)+'%'},grid:{left:80,right:18,top:12,bottom:18},
     xAxis:{type:'value',max:100,axisLabel:{formatter:'{value}%'}},yAxis:{type:'category',data:show,axisLabel:{fontSize:12}},series},true);
   document.getElementById('statelegend').innerHTML=STATES.map(s=>`<span><i style="background:${SC[s]}"></i>${s}</span>`).join('');}
 
 function renderTE(){const ch=initChart('techart'),show=stNamesFiltered();
   const te=show.map(n=>{const f=V.fp.byStation[n];return f&&f.te!=null?+f.te.toFixed(3):0;});
   const re=show.map(n=>{const f=V.fp.byStation[n];return f&&f.re!=null?+f.re.toFixed(1):0;});
-  ch.setOption({tooltip:{trigger:'axis',axisPointer:{type:'shadow'},formatter:ps=>{const i=ps[0].dataIndex;
+  ch.setOption({animationDuration:700,animationEasing:'cubicOut',tooltip:{trigger:'axis',axisPointer:{type:'shadow'},formatter:ps=>{const i=ps[0].dataIndex;
       return `${show[i]}<br>t_e: <b>${te[i].toFixed(3)}</b> h/m&sup3;<br>r_e: ${re[i].toFixed(1)} m&sup3;/h`;}},
     legend:{data:['t_e (h/m³)','r_e (m³/h)'],bottom:0,itemWidth:12,textStyle:{fontSize:11}},grid:{left:46,right:48,top:14,bottom:40},
     xAxis:{type:'category',data:show,axisLabel:{fontSize:11}},
@@ -491,14 +523,14 @@ function renderProcBox(){const ch=initChart('procbox'),show=stNamesFiltered();
     const s=STATIONS[b[1]],pr=PRODS[b[2]];if(curProduct!=='all'&&pr!==curProduct)continue;if(stnSet&&!stnSet.has(s))continue;
     if(byS[s])byS[s].push(b[7]);}
   const boxes=show.map(s=>pctls(byS[s]));
-  ch.setOption({tooltip:{trigger:'item',formatter:p=>{const d=boxes[p.dataIndex];return `${show[p.dataIndex]}<br>P95 ${fmt(d[4],2)} &middot; Q3 ${fmt(d[3],2)}<br>Mediana <b>${fmt(d[2],2)}</b> h<br>Q1 ${fmt(d[1],2)} &middot; P5 ${fmt(d[0],2)}`;}},
+  ch.setOption({animationDuration:700,animationEasing:'cubicOut',tooltip:{trigger:'item',formatter:p=>{const d=boxes[p.dataIndex];return `${show[p.dataIndex]}<br>P95 ${fmt(d[4],2)} &middot; Q3 ${fmt(d[3],2)}<br>Mediana <b>${fmt(d[2],2)}</b> h<br>Q1 ${fmt(d[1],2)} &middot; P5 ${fmt(d[0],2)}`;}},
     grid:{left:42,right:14,top:14,bottom:26},xAxis:{type:'category',data:show,axisLabel:{fontSize:11}},yAxis:{type:'value',name:'h'},
     series:[{type:'boxplot',data:boxes.map(b=>({value:b,itemStyle:{color:'#1565c022',borderColor:'#1565c0',borderWidth:1.5}}))}]},true);}
 
 function renderCycleBar(){const ch=initChart('cyclebar'),show=stNamesFiltered();
   const cola=show.map(n=>{const f=V.fp.byStation[n];return f&&f.cola_mean!=null?+f.cola_mean.toFixed(2):0;});
   const proc=show.map(n=>{const f=V.fp.byStation[n];return f&&f.ciclo_mean!=null?+Math.max(f.ciclo_mean-f.cola_mean,0).toFixed(2):0;});
-  ch.setOption({tooltip:{trigger:'axis',axisPointer:{type:'shadow'},valueFormatter:v=>fmt(v,2)+' h'},
+  ch.setOption({animationDuration:700,animationEasing:'cubicOut',tooltip:{trigger:'axis',axisPointer:{type:'shadow'},valueFormatter:v=>fmt(v,2)+' h'},
     legend:{data:['Cola','Proceso'],bottom:0,itemWidth:12,textStyle:{fontSize:11}},grid:{left:50,right:14,top:14,bottom:40},
     xAxis:{type:'category',data:show,axisLabel:{fontSize:11}},yAxis:{type:'value',name:'h'},
     series:[{name:'Cola',type:'bar',stack:'c',data:cola,itemStyle:{color:'#ef6c00'}},
@@ -506,14 +538,14 @@ function renderCycleBar(){const ch=initChart('cyclebar'),show=stNamesFiltered();
 
 function renderCycleBox(){const ch=initChart('cyclebox');
   const ps=curProduct==='all'?PRODS:[curProduct];const boxes=ps.map(p=>V.fp.cycleBox[p]);
-  ch.setOption({tooltip:{trigger:'item',formatter:p=>{const d=boxes[p.dataIndex];return `${ps[p.dataIndex]}<br>P95 ${fmt(d[4],1)} &middot; Q3 ${fmt(d[3],1)}<br>Mediana <b>${fmt(d[2],1)}</b> h<br>Q1 ${fmt(d[1],1)} &middot; P5 ${fmt(d[0],1)}`;}},
+  ch.setOption({animationDuration:700,animationEasing:'cubicOut',tooltip:{trigger:'item',formatter:p=>{const d=boxes[p.dataIndex];return `${ps[p.dataIndex]}<br>P95 ${fmt(d[4],1)} &middot; Q3 ${fmt(d[3],1)}<br>Mediana <b>${fmt(d[2],1)}</b> h<br>Q1 ${fmt(d[1],1)} &middot; P5 ${fmt(d[0],1)}`;}},
     grid:{left:48,right:14,top:14,bottom:26},xAxis:{type:'category',data:ps},yAxis:{type:'value',name:'h'},
     series:[{type:'boxplot',data:boxes.map((b,i)=>({value:b,itemStyle:{color:PC[ps[i]]+'55',borderColor:PC[ps[i]],borderWidth:1.6}}))}]},true);}
 
 function renderUtilFP(){const ch=initChart('utilfp'),show=stNamesFiltered();
   const ufp=show.map(n=>{const f=V.fp.byStation[n];return f&&f.util_fp!=null?+(f.util_fp*100).toFixed(1):0;});
   const uop=show.map(n=>{const f=V.fp.byStation[n];return f&&f.util_op!=null?+(f.util_op*100).toFixed(1):0;});
-  ch.setOption({tooltip:{trigger:'axis',axisPointer:{type:'shadow'},valueFormatter:v=>v.toFixed(1)+'%'},
+  ch.setOption({animationDuration:700,animationEasing:'cubicOut',tooltip:{trigger:'axis',axisPointer:{type:'shadow'},valueFormatter:v=>v.toFixed(1)+'%'},
     legend:{data:['Utilización FP','Utilización operativa'],bottom:0,itemWidth:12,textStyle:{fontSize:11}},grid:{left:42,right:14,top:14,bottom:40},
     xAxis:{type:'category',data:show,axisLabel:{fontSize:11}},yAxis:{type:'value',axisLabel:{formatter:'{value}%'}},
     series:[{name:'Utilización FP',type:'bar',data:ufp.map(v=>({value:v,itemStyle:{color:utilColor(v/100),borderRadius:[4,4,0,0]}})),label:{show:true,position:'top',fontSize:9,formatter:p=>p.value+'%'}},
@@ -528,18 +560,18 @@ function renderWipTime(){const ch=initChart('wiptime'),days=META.days,others=BUF
     areaStyle:{color:'rgba(198,40,40,.10)'},data:V.series.wip['log_yard'],markArea:winMark()}];
   const pal=['#1565c0','#00897b','#8e24aa'];
   others.forEach((b,i)=>series.push({name:b,type:'line',showSymbol:false,yAxisIndex:1,lineStyle:{width:1.5,color:pal[i%3]},data:V.series.wip[b]}));
-  ch.setOption({tooltip:{trigger:'axis',valueFormatter:v=>fmt(v)+' m³'},legend:{bottom:0,itemWidth:12,textStyle:{fontSize:10}},
+  ch.setOption({animationDuration:700,animationEasing:'cubicOut',tooltip:{trigger:'axis',valueFormatter:v=>fmt(v)+' m³'},legend:{bottom:0,itemWidth:12,textStyle:{fontSize:10}},
     grid:{left:54,right:54,top:14,bottom:42},xAxis:{type:'category',data:days,name:'día',axisLabel:{fontSize:10}},
     yAxis:[{type:'value',name:'patio',axisLabel:{fontSize:10}},{type:'value',name:'interm.',position:'right',axisLabel:{fontSize:10}}],series},true);}
 
 function renderArrProc(){const ch=initChart('arrproc'),days=META.days;
-  ch.setOption({tooltip:{trigger:'axis',valueFormatter:v=>fmt(v,1)+' m³'},legend:{bottom:0,itemWidth:12,textStyle:{fontSize:11}},
+  ch.setOption({animationDuration:700,animationEasing:'cubicOut',tooltip:{trigger:'axis',valueFormatter:v=>fmt(v,1)+' m³'},legend:{bottom:0,itemWidth:12,textStyle:{fontSize:11}},
     grid:{left:50,right:16,top:14,bottom:42},xAxis:{type:'category',data:days,name:'día',axisLabel:{fontSize:10}},yAxis:{type:'value',name:'m³/día'},
     series:[{name:'Arribos de trozos',type:'line',showSymbol:false,smooth:true,lineStyle:{width:1.4,color:'#ef6c00'},data:V.series.arrivals,markArea:winMark()},
       {name:'Procesado aserradero',type:'line',showSymbol:false,smooth:true,lineStyle:{width:1.4,color:'#2e7d32'},data:V.series.aserradero_in}]},true);}
 
 function renderFailStation(){const ch=initChart('failstation'),dec=curRep==='avg'?1:0,show=stNamesFiltered();
-  ch.setOption({tooltip:{trigger:'axis',axisPointer:{type:'shadow'},valueFormatter:v=>fmt(v,dec)+' fallas'},grid:{left:44,right:14,top:12,bottom:24},
+  ch.setOption({animationDuration:700,animationEasing:'cubicOut',tooltip:{trigger:'axis',axisPointer:{type:'shadow'},valueFormatter:v=>fmt(v,dec)+' fallas'},grid:{left:44,right:14,top:12,bottom:24},
     xAxis:{type:'category',data:show,axisLabel:{fontSize:11}},yAxis:{type:'value'},
     series:[{type:'bar',data:show.map(n=>({value:+(V.failures.by_station[n]||0).toFixed(dec),itemStyle:{color:n==='aserradero'?'#c62828':'#1565c0',borderRadius:[4,4,0,0]}})),
       label:{show:true,position:'top',fontSize:10,formatter:p=>fmt(p.value,dec)}}]},true);}
@@ -547,28 +579,28 @@ function renderFailStation(){const ch=initChart('failstation'),dec=curRep==='avg
 function renderFailClass(){const ch=initChart('failclass'),c=V.failures.cats;
   const data=[{name:'En turno (esperable)',value:c.en_turno,itemStyle:{color:'#2e7d32'}},{name:'24/7 continuo (legítimo)',value:c.cont,itemStyle:{color:'#1565c0'}},
     {name:'Overrun de lote (legítimo)',value:c.overrun,itemStyle:{color:'#fbc02d'}},{name:'Inicio en borde (artefacto)',value:c.borde,itemStyle:{color:'#ef6c00'}}];
-  ch.setOption({tooltip:{trigger:'item',formatter:p=>`${p.name}<br><b>${fmt(p.value,1)}</b> (${p.percent}%)`},legend:{bottom:0,type:'scroll',textStyle:{fontSize:10},itemWidth:11},
+  ch.setOption({animationDuration:700,animationEasing:'cubicOut',tooltip:{trigger:'item',formatter:p=>`${p.name}<br><b>${fmt(p.value,1)}</b> (${p.percent}%)`},legend:{bottom:0,type:'scroll',textStyle:{fontSize:10},itemWidth:11},
     series:[{type:'pie',radius:['42%','68%'],center:['50%','44%'],avoidLabelOverlap:true,label:{show:false},data}]},true);}
 
 function renderFailHour(){const ch=initChart('failhour'),H=[...Array(24).keys()];
-  ch.setOption({tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},legend:{bottom:0,itemWidth:12,textStyle:{fontSize:10}},grid:{left:38,right:12,top:12,bottom:42},
+  ch.setOption({animationDuration:700,animationEasing:'cubicOut',tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},legend:{bottom:0,itemWidth:12,textStyle:{fontSize:10}},grid:{left:38,right:12,top:12,bottom:42},
     xAxis:{type:'category',data:H,name:'hora',nameTextStyle:{fontSize:10},axisLabel:{fontSize:9,interval:1}},yAxis:{type:'value'},
     series:[{name:'Turno',type:'bar',stack:'a',data:V.failures.hour_turno.map(x=>+x.toFixed(2)),itemStyle:{color:'#1565c0'},markArea:{itemStyle:{color:'rgba(46,125,50,.10)'},data:[[{xAxis:'7'},{xAxis:'23'}]]}},
       {name:'24/7',type:'bar',stack:'a',data:V.failures.hour_cont.map(x=>+x.toFixed(2)),itemStyle:{color:'#ef6c00'}}]},true);}
 
 function renderProdProd(){const ch=initChart('prodprod');
   const data=PRODS.map(p=>({name:p,value:+(V.production.vol[p]||0).toFixed(0),itemStyle:{color:PC[p]}}));
-  ch.setOption({tooltip:{trigger:'item',formatter:p=>`${p.name}<br><b>${fmt(p.value)}</b> m³/año (${p.percent}%)`},legend:{bottom:0,itemWidth:12,textStyle:{fontSize:11}},
+  ch.setOption({animationDuration:700,animationEasing:'cubicOut',tooltip:{trigger:'item',formatter:p=>`${p.name}<br><b>${fmt(p.value)}</b> m³/año (${p.percent}%)`},legend:{bottom:0,itemWidth:12,textStyle:{fontSize:11}},
     series:[{type:'pie',radius:['45%','70%'],center:['50%','44%'],label:{show:true,formatter:p=>p.name+'\n'+fmt(p.value),fontSize:11,fontWeight:600},data}]},true);}
 
 function renderThroughTime(){const ch=initChart('throughtime'),days=META.days;
-  ch.setOption({tooltip:{trigger:'axis',valueFormatter:v=>fmt(v,1)+' m³'},grid:{left:46,right:14,top:14,bottom:30},
+  ch.setOption({animationDuration:700,animationEasing:'cubicOut',tooltip:{trigger:'axis',valueFormatter:v=>fmt(v,1)+' m³'},grid:{left:46,right:14,top:14,bottom:30},
     xAxis:{type:'category',data:days,name:'día',axisLabel:{fontSize:10}},yAxis:{type:'value',name:'m³/día'},
     series:[{type:'line',showSymbol:false,smooth:true,data:V.series.throughput,lineStyle:{width:1.4,color:'#1565c0'},areaStyle:{color:'rgba(21,101,192,.10)'},
       markArea:winMark([[{xAxis:0,name:'warm-up',itemStyle:{color:'rgba(198,40,40,.10)'}},{xAxis:WARM}]])}]},true);}
 
 function renderLeadBox(){const ch=initChart('leadbox');const ps=curProduct==='all'?PRODS:[curProduct];const boxes=ps.map(p=>V.production.lead[p]);
-  ch.setOption({tooltip:{trigger:'item',formatter:p=>{const d=boxes[p.dataIndex];return `${ps[p.dataIndex]}<br>P95: ${fmt(d[4],1)} h<br>Q3: ${fmt(d[3],1)} h<br>Mediana: <b>${fmt(d[2],1)} h</b><br>Q1: ${fmt(d[1],1)} h<br>P5: ${fmt(d[0],1)} h`;}},
+  ch.setOption({animationDuration:700,animationEasing:'cubicOut',tooltip:{trigger:'item',formatter:p=>{const d=boxes[p.dataIndex];return `${ps[p.dataIndex]}<br>P95: ${fmt(d[4],1)} h<br>Q3: ${fmt(d[3],1)} h<br>Mediana: <b>${fmt(d[2],1)} h</b><br>Q1: ${fmt(d[1],1)} h<br>P5: ${fmt(d[0],1)} h`;}},
     grid:{left:46,right:14,top:14,bottom:26},xAxis:{type:'category',data:ps},yAxis:{type:'value',name:'h'},
     series:[{type:'boxplot',data:boxes.map((b,i)=>({value:b,itemStyle:{color:PC[ps[i]]+'55',borderColor:PC[ps[i]],borderWidth:1.6}}))}]},true);}
 
@@ -578,7 +610,7 @@ function demandAgg(){const PA=META.parametros;if(!PA||!PA.nodos)return null;cons
 function renderDemand(){const ch=initChart('demandchart'),A=demandAgg();if(!A)return;
   const prod=PRODS.map(p=>+(V.production.vol[p]||0).toFixed(0));
   const dmin=PRODS.map(p=>A[p]?+A[p].min.toFixed(0):0),dcap=PRODS.map(p=>A[p]?+A[p].cap.toFixed(0):0);
-  ch.setOption({tooltip:{trigger:'axis',axisPointer:{type:'shadow'},formatter:ps=>{const i=ps[0].dataIndex,p=PRODS[i];
+  ch.setOption({animationDuration:700,animationEasing:'cubicOut',tooltip:{trigger:'axis',axisPointer:{type:'shadow'},formatter:ps=>{const i=ps[0].dataIndex,p=PRODS[i];
       const ok=prod[i]>=dmin[i]&&prod[i]<=dcap[i];return `${p}<br>Producci&oacute;n: <b>${fmt(prod[i])}</b> m&sup3;/a&ntilde;o<br>Demanda m&iacute;n: ${fmt(dmin[i])}<br>Capacidad m&aacute;x: ${fmt(dcap[i])}<br>${ok?'&#10004; cumple':'&#10007; no cumple'}`;}},
     legend:{data:['Producci&oacute;n','Demanda m&iacute;n','Capacidad m&aacute;x'],bottom:0,itemWidth:12,textStyle:{fontSize:11}},grid:{left:60,right:16,top:14,bottom:40},
     xAxis:{type:'category',data:PRODS},yAxis:{type:'value',name:'m³/año'},
@@ -606,7 +638,7 @@ function renderConvergencia(){const C=META.convergencia;if(!C||!C.norm)return;co
     lineStyle:{width:name.indexOf('LINEA')>=0?3:1.4,color:pal[name]||'#888'},data:C.norm[name]}));
   if(series.length){series[0].markArea={silent:true,itemStyle:{color:'rgba(198,40,40,.10)'},data:[[{xAxis:0,name:'warm-up '+WARM+' d'},{xAxis:WARM}]]};
     series[0].markLine={silent:true,symbol:'none',lineStyle:{color:'#2e7d32',type:'dotted'},data:[{yAxis:1.12},{yAxis:.88},{yAxis:1}]};}
-  ch.setOption({tooltip:{trigger:'axis',valueFormatter:v=>(+v).toFixed(2)},legend:{bottom:0,type:'scroll',textStyle:{fontSize:10},itemWidth:12},
+  ch.setOption({animationDuration:700,animationEasing:'cubicOut',tooltip:{trigger:'axis',valueFormatter:v=>(+v).toFixed(2)},legend:{bottom:0,type:'scroll',textStyle:{fontSize:10},itemWidth:12},
     grid:{left:52,right:18,top:16,bottom:54},xAxis:{type:'category',data:days,name:'día',axisLabel:{fontSize:10}},
     yAxis:{type:'value',name:'salida / media régimen',min:0,max:1.6},dataZoom:[{type:'slider',startValue:0,endValue:90,height:16,bottom:30},{type:'inside'}],series},true);}
 
@@ -684,9 +716,13 @@ function applyStationFilter(){const pills=document.querySelectorAll('#stationpil
   dsel.onchange=()=>{curDay=dsel.value;renderAll();};
   renderStationFilter();document.getElementById('filterbtn').onclick=applyStationFilter;
   document.getElementById('foot').innerHTML='Aserradero CMPC Mulch&eacute;n &middot; Parte 1 &middot; Factory Physics (Hopp &amp; Spearman) &middot; Python + ECharts (offline)';
+  const ld=document.getElementById('loader');ld.style.display='block';
   renderKpiFormula();renderAudit();renderSupuestos();renderAll();
+  ld.style.display='none';
   window.addEventListener('resize',()=>Object.values(CHARTS).forEach(c=>c.resize()));
 })();
+window.addEventListener('scroll',()=>{const btn=document.getElementById('backtotop');
+  btn.classList.toggle('show',window.scrollY>600);},{passive:true});
 </script>
 </body>
 </html>'''
@@ -695,3 +731,12 @@ html = TEMPLATE.replace("__ECHARTS__", ECHARTS).replace("__DATA__", DATA_JSON)
 out = U.OUT / "dashboard.html"
 out.write_text(html, encoding="utf-8")
 print(f">> {out}  ({out.stat().st_size/1024:.0f} KB)")
+# Also write index.html at the parte1 root for static deployment
+idx = U.BASE / "parte1" / "index.html"
+if not idx.exists() or idx.read_text(encoding="utf-8").strip() == "":
+    idx.write_text(f'<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
+        f'<meta http-equiv="refresh" content="0;url=output/dashboard.html">'
+        f'<title>Dashboard CMPC Mulchén</title></head><body>'
+        f'<p>Redirigiendo al <a href="output/dashboard.html">Dashboard</a>...</p></body></html>',
+        encoding="utf-8")
+    print(f">> {idx}  (redirect)")

@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "framework": null,
+  "buildCommand": null,
+  "outputDirectory": "output",
+  "builds": [
+    {
+      "src": "output/dashboard.html",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    { "src": "/", "dest": "/output/dashboard.html" },
+    { "src": "/(.+)", "dest": "/output/$1" }
+  ],
+  "cleanUrls": true,
+  "trailingSlash": false
+}

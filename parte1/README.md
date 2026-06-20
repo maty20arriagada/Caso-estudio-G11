@@ -30,6 +30,39 @@ Requisitos: Python 3.11, `pandas`, `numpy`, `matplotlib` (sin dependencias extra
 | `05_dashboard_data.py` | Calcula todas las métricas (por réplica + media/IC95%) → `output/dashboard_data.json`. |
 | `05_dashboard_build.py` | Genera `output/dashboard.html` (dashboard interactivo con ECharts, offline). |
 
+## Cómo desplegar el dashboard en Vercel / Railway
+
+El archivo `output/dashboard.html` es **autocontenido** (ECharts + datos embebidos, ~3 MB).
+Se despliega como sitio estático:
+
+### Opción A — Vercel (recomendada, fácil)
+
+```bash
+# Desde la carpeta parte1/
+npx vercel --prod
+# O: arrastra la carpeta parte1/ a https://vercel.com/new
+```
+
+### Opción B — Railway
+
+```bash
+# Desde la carpeta parte1/
+railway up
+# O: conecta el repo de GitHub en https://railway.app/new
+```
+
+### Opción C — GitHub Pages
+
+```bash
+# Copia el HTML a la raíz del repo
+cp output/dashboard.html ../index.html
+# Sube a GitHub y activa GitHub Pages desde la raíz
+```
+
+> El dashboard funciona offline — no requiere servidor ni backend.
+> Con los filtros (réplica, producto, período, máquina, warm-up)
+> se recalculan todas las métricas en el navegador.
+
 ## Salidas (`output/`)
 
 - `RESUMEN_PARTE1.md` (en `parte1/`) — informe consolidado.
