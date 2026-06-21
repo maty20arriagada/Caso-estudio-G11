@@ -1,0 +1,253 @@
+================================================================================
+INFORME PARTE 2 — MODELO DE DISTRIBUCION OPTIMA
+Caso de Estudio: Aserradero CMPC Mulchen
+================================================================================
+
+1.  RESUMEN EJECUTIVO
+────────────────────────────────────────────────────────────────────────────────
+Se desarrollo un modelo de programacion lineal para minimizar el costo total de
+transporte de madera aserrada desde la planta CMPC Mulchen hacia 6 destinos
+(3 puertos + 3 plantas de remanufactura/plywood), distribuyendo 3 productos
+(P1= madera verde tratada, P2= madera seca clasificada, P3= madera impregnada).
+
+El modelo fue resuelto con PuLP (CBC solver), utilizando distancias reales de
+carretera extraidas de Google Earth (KML, formula Haversine) y volumenes de
+produccion obtenidos del analisis de productividad de la Parte 1.
+
+Se ejecuto el modelo para las 5 replicas independientes del simulador y para
+la produccion promedio. Ademas, se incorporo un analisis multimodal comparando
+transporte en tractocamion versus ferrocarril para las rutas aplicables.
+
+Resultado promedio: Costo total minimo = $203,076,644 CLP/ano (10 despachos).
+Desviacion estandar entre replicas: $1,964,206 CLP (CV = 1.0%).
+
+
+2.  DATOS DE ENTRADA
+────────────────────────────────────────────────────────────────────────────────
+
+2.1 Produccion disponible (fuente: Parte 1 — product_outputs.csv)
+    Producto  Descripcion                      Promedio      Min (Rep)   Max (Rep)
+    ─────────────────────────────────────────────────────────────────────────────
+    P1        Madera verde tratada              6,928         6,538       7,233
+    P2        Madera seca clasificada           9,620         9,027      10,019
+    P3        Madera impregnada                 5,567         5,178       5,941
+    ─────────────────────────────────────────────────────────────────────────────
+    Total                                      22,115        21,915      22,431
+
+    Coeficiente de variacion entre replicas: 0.8% (altamente estable).
+
+2.2 Distancias desde Mulchen (fuente: Google Earth KML, Haversine)
+    Destino                               Distancia (km)  Puntos GPS
+    ───────────────────────────────────────────────────────────────
+    Planta Plywood CMPC Collipulli              39.95         831
+    Planta Reman. CMPC Los Angeles              80.71       1,166
+    Planta Reman. CMPC Coronel                 140.93       2,342
+    Puerto Coronel                             142.38       2,367
+    Puerto Lirquen                             172.60       1,847
+    Puerto San Vicente                         175.86       1,988
+
+2.3 Costo unitario de transporte
+    Costo por m³·km = $100 CLP (LP). Costo real tractocamion = $1,200/km fijo +
+    $50,000/viaje, con capacidad de 30 m³/viaje (tractocamion 6x4 + semirremolque
+    3 ejes, estandar forestal chileno).
+
+2.4 Limites contractuales [m³/ano]
+    Destino              P1 (min-max)      P2 (min-max)      P3 (min-max)
+    ─────────────────────────────────────────────────────────────────────
+    Puerto Coronel       1,200–12,000        —    —          1,200–10,000
+    Puerto San Vicente      —    —          1,500–8,000        800–12,000
+    Puerto Lirquen          —    —          1,500–8,000        —    —
+    Reman Coronel        1,500–8,000         —    —            —    —
+    Reman Los Angeles    1,300–6,000       1,500–5,000         —    —
+    Plywood Collipulli      —    —          1,500–5,000      1,000–4,000
+
+
+3.  FORMULACION MATEMATICA
+────────────────────────────────────────────────────────────────────────────────
+    min Z = Σ_i Σ_j  100 · d_i · x_ij
+
+    s.a.:
+        Σ_i x_ij = P_j                      ∀j   (asignacion total)
+        L_ij ≤ x_ij ≤ U_ij                  ∀i,j (limites contractuales)
+        x_ij ≥ 0
+
+    Solver: PuLP 3.3 + CBC 2.10.3 (open source). 3 iteraciones por replica.
+
+
+4.  RESULTADOS — PLAN OPTIMO (PROMEDIO 5 REPLICAS)
+────────────────────────────────────────────────────────────────────────────────
+
+4.1 Despachos optimos
+    Prod  Destino                             m³       km       Costo LP
+    ─────────────────────────────────────────────────────────────────────────
+    P2    Plywood Collipulli                5,000     40.0     19,975,000
+    P1    Reman Los Angeles                 4,228     80.7     34,127,255
+    P3    Plywood Collipulli                3,567     40.0     14,248,367
+    P2    Reman Los Angeles                 1,620     80.7     13,077,522
+    P1    Reman Coronel                     1,500    140.9     21,139,500
+    P2    Puerto San Vicente                1,500    175.9     26,379,000
+    P2    Puerto Lirquen                    1,500    172.6     25,890,000
+    P1    Puerto Coronel                    1,200    142.4     17,085,600
+    P3    Puerto Coronel                    1,200    142.4     17,085,600
+    P3    Puerto San Vicente                  800    175.9     14,068,800
+    ─────────────────────────────────────────────────────────────────────────
+    Total (10 despachos)                   22,115             203,076,644
+
+4.2 Indicadores globales
+    Costo total minimo                          $203,076,644 CLP
+    Despachos activos                           10
+    Distancia media ponderada                    98.6 km
+    Costo / m³ ponderado                        $91.8 CLP/m³
+
+4.3 Por producto
+    Producto   Vol. (m³)   Destinos   Costo LP        Costo/m³
+    ──────────────────────────────────────────────────────────────
+    P1           6,928        3       $72,352,355      $10,443
+    P2           9,620        4       $85,321,522       $8,869
+    P3           5,567        3       $45,402,767       $8,156
+
+4.4 Comparativo por replica
+    Replica   P1       P2        P3       Total     Costo LP        Var. vs Prom.
+    ──────────────────────────────────────────────────────────────────────────────
+    Rep 0    7,100    9,027     5,923    22,050    $203,027,319      -0.02%
+    Rep 1    7,174    9,528     5,319    22,021    $203,321,050      +0.12%
+    Rep 2    7,233   10,019     5,178    22,431    $207,210,186      +2.04%
+    Rep 3    6,596    9,848     5,471    21,915    $201,850,799      -0.60%
+    Rep 4    6,538    9,679     5,941    22,159    $201,900,961      -0.58%
+    ──────────────────────────────────────────────────────────────────────────────
+    Prom     6,928    9,620     5,567    22,115    $203,076,644
+    Desv.                                                      $1,964,206 (1.0%)
+
+
+5.  ANALISIS DE SENSIBILIDAD DEL OPTIMO
+────────────────────────────────────────────────────────────────────────────────
+    La solucion es altamente estable entre replicas (CV ~1.0% en costo). Los
+    patrones de asignacion se mantienen: los destinos cercanos (Collipulli,
+    Los Angeles) absorben el excedente; los puertos operan al minimo contractual
+    por su alto costo unitario de transporte (>$14,000 CLP/m³ vs $3,995 CLP/m³).
+
+
+6.  ANALISIS MULTIMODAL: TRACTOCAMION vs FERROCARRIL
+────────────────────────────────────────────────────────────────────────────────
+
+6.1 Tractocamion (modo principal)
+    Capacidad:        30 m³/viaje (tractocamion 6x4 + semirremolque 3 ejes)
+    Costo variable:   $1,200 CLP/km cargado
+    Costo fijo:       $50,000 CLP/viaje (carga/descarga, espera, administracion)
+    Viajes totales:   739 viajes/ano (~2 viajes/dia en promedio)
+
+    Desglose por destino (datos promedio):
+    Destino                        Vol (m³)  Viajes  Costo camion/ano
+    ───────────────────────────────────────────────────────────────────
+    Plywood Collipulli               8,567     286      $28,010,840
+    Reman Los Angeles                5,849     196      $28,782,992
+    Puerto San Vicente               2,300      77      $20,099,464
+    Puerto Lirquen                   1,500      50      $12,856,000
+    Puerto Coronel                   2,400      80      $17,668,480
+    Reman Coronel                    1,500      50      $10,955,800
+    ───────────────────────────────────────────────────────────────────
+    TOTAL                           22,116     739     $118,373,576
+
+    Costo unitario real camion: ~$5,353 CLP/m³ promedio vs $9,182 CLP/m³ del
+    modelo LP. La diferencia refleja que el LP usa $100/(m³·km) como tarifa
+    de mercado (incluye retorno vacio, margen del transportista), mientras
+    el costo de camion modela solo el costo operativo directo.
+
+6.2 Ferrocarril (alternativa)
+    Operadores:       FEPASA, TRANSAP
+    Costo variable:   ~$30 CLP/(m³·km) (tarifa ferroviaria de carga)
+    Transbordo:       $3,500 CLP/m³ (camion Mulchen→Laja + carga/descarga tren)
+    Distancia Laja:   ~30 km desde Mulchen (primer tramo en camion)
+
+    Rutas ferroviarias aplicables:
+    - Laja → Concepcion → Talcahuano (San Vicente, Lirquen)
+    - Laja → Concepcion → Coronel (Puerto Coronel, Reman Coronel)
+    - Longitud total via ferrea: ~120-155 km segun destino
+
+    No aplicable a:
+    - Collipulli (sin acceso ferroviario)
+    - Los Angeles (la via existe pero el destino esta a 80 km por carretera;
+      el transbordo anula la ventaja para distancias cortas)
+
+    Comparacion camion vs tren (rutas aplicables):
+    Destino                  Vol (m³)  Costo camion  Costo tren est.  Ahorro
+    ──────────────────────────────────────────────────────────────────────────
+    Puerto Coronel             2,400    $17,668,480     $18,651,360   -$0.98M
+    Puerto San Vicente         2,300    $20,099,464     $20,184,340   -$0.08M
+    Puerto Lirquen             1,500    $12,856,000     $13,017,000   -$0.16M
+    Reman Coronel              1,500    $10,955,800     $11,591,850   -$0.64M
+    ──────────────────────────────────────────────────────────────────────────
+    Subtotal rutas tren        7,700    $61,579,744     $63,444,550   -$1.86M
+
+    CONCLUSION: El tren NO es competitivo para los volumenes actuales. El costo
+    de transbordo ($3,500/m³) y el tramo inicial en camion anulan la ventaja
+    de la menor tarifa ferroviaria. El tren seria viable solo si:
+    (a) Se consolidaran volumenes mayores (>20,000 m³/ano por corredor),
+    (b) Existiera una conexion ferroviaria directa desde Mulchen (actualmente
+        la estacion mas cercana es Laja, a 30 km), o
+    (c) Se implementara un centro de consolidacion en Laja para multiples
+        productores de la zona.
+
+6.3 Comparativo de costos de transporte (metodologias)
+    Metodo                   Costo total/ano    $/m³      Base de calculo
+    ────────────────────────────────────────────────────────────────────────
+    Modelo LP                  $203,076,644      9.18    $100/(m³·km) tarifa
+    Tractocamion (operativo)   $118,373,576      5.35    $1,200/km + $50k fijo
+    Tren (estimado)             $63,444,550*     8.24*   solo rutas aplicables
+
+    *Nota: El costo de tren cubre solo 4 de 6 destinos (7,700 de 22,115 m³).
+    Los 14,415 m³ restantes se transportarian en camion (~$56.8M adicionales).
+
+
+7.  TECNOLOGIA Y REPRODUCIBILIDAD
+────────────────────────────────────────────────────────────────────────────────
+    Lenguaje:       Python 3.11+
+    Solver:         PuLP 3.3 + CBC 2.10.3 (open source)
+    Dependencias:   numpy, pandas, pulp, xml.etree.ElementTree
+    Distancias:     Google Earth KML → Haversine
+    Produccion:     Parte 1 product_outputs.csv (5 replicas)
+
+    Pipeline:
+        python3 parte2/kml_parser.py
+        python3 parte2/modelo_distribucion.py
+        python3 parte2/build_dashboard.py
+    O bien:
+        python3 parte2/run_all.py
+
+    Dashboard interactivo: parte2/output/dashboard_distribucion.html
+    Filtros: Replica (0-4, promedio), Producto (P1/P2/P3/Todos),
+             Destino/Ruta (6 destinos individuales o todos)
+
+
+8.  SALIDAS GENERADAS
+────────────────────────────────────────────────────────────────────────────────
+    Archivo                                    Contenido
+    ───────────────────────────────────────────────────────────────────
+    distancias.json                            Distancias + rutas GPS (KML)
+    solucion_distribucion.csv                  Plan optimo promedio + camiones
+    solucion_distribucion.json                 Datos completos (6 variantes)
+    modelo_distribucion.lp                     Formulacion LP exportada
+    output/dashboard_distribucion.html         Dashboard interactivo completo
+    output/INFORME_PARTE2.txt                  Este informe
+
+
+9.  LIMITACIONES Y SUPUESTOS
+────────────────────────────────────────────────────────────────────────────────
+    - Costo de transporte LP: $100 CLP/(m³·km) constante, sin economias de
+      escala ni diferenciacion por producto.
+    - Las distancias son rutas reales de Google Earth; se asume que son las
+      efectivamente transitables por camiones madereros.
+    - El modelo es estatico (periodo anual); no considera estacionalidad.
+    - Los limites contractuales L_ij/U_ij se asumen fijos del enunciado.
+    - Capacidad del tractocamion: 30 m³ (promedio para madera aserrada en
+      la Region del Biobio). La capacidad real varia segun densidad de la
+      madera (verde vs seca) y configuracion del equipo.
+    - Costos de camion y tren son estimaciones de referencia (2024). No
+      incluyen peajes especificos, congestion, ni restricciones de ruta.
+    - El analisis de tren asume disponibilidad de servicio en los ramales
+      mencionados. La factibilidad operativa debe confirmarse con FEPASA.
+    - No se modela flota, tiempos de viaje, ni restricciones de capacidad vial.
+
+================================================================================
+Fin del informe — Parte 2, Caso de Estudio CMPC Mulchen
+================================================================================
