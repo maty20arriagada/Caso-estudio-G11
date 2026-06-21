@@ -21,6 +21,7 @@ OUT = PARTE2 / "output"
 OUT.mkdir(parents=True, exist_ok=True)
 
 SOLUTION_JSON = (PARTE2 / "solucion_distribucion.json").read_text(encoding="utf-8")
+GREEDY_JSON = (PARTE2 / "greedy_solucion.json").read_text(encoding="utf-8")
 ECHARTS_JS = (BASE / "parte1" / "vendor" / "echarts.min.js").read_text(encoding="utf-8")
 
 HTML = f'''<!DOCTYPE html>
@@ -89,7 +90,7 @@ table.tbl tbody tr:hover{{background:#f8fafe}}
 <div class="wrap">
 <header class="top">
 <h1>Distribucion Optima — CMPC Mulchen</h1>
-<div class="sub">Parte 2 · Programacion Lineal (PuLP + CBC) · Minimizacion de costo de transporte</div>
+<div class="sub">Parte 2 · Heuristica Greedy (en vivo) + Modelo LP optimo (PuLP+CBC) · Minimizacion de costo de transporte</div>
 <div class="controls">
 <div class="cg"><label>Replica</label><select id="repsel"><option value="avg">Promedio 5 replicas</option></select></div>
 <div class="cg"><label>Producto</label><select id="prodsel"><option value="all">Todos (P1+P2+P3)</option><option value="P1">P1 — Mad. verde tratada</option><option value="P2">P2 — Mad. seca clasificada</option><option value="P3">P3 — Mad. impregnada</option></select></div>
@@ -133,6 +134,8 @@ table.tbl tbody tr:hover{{background:#f8fafe}}
 </div>
 </div>
 </div>
+
+__GREEDY_HTML__
 
 <div class="section">
 <h2><span class="tag">Transporte</span> Analisis Multimodal</h2>
@@ -178,6 +181,7 @@ x<sub>ij</sub> &ge; 0                       (no negatividad)
 
 <script>
 const SOL = {SOLUTION_JSON};
+const GREEDY = __GREEDY_DATA__;
 const CH = {{}};
 const COLORS = {{P1:'#1565c0',P2:'#2e7d32',P3:'#ef6c00'}};
 var curReplica='avg',curProduct='all',curDest='all';
@@ -524,6 +528,8 @@ function renderModalChart(){{
   CH.modal=c;
 }}
 
+__GREEDY_JS__
+
 function refreshAll(){{
   safeCall(renderKPIs,'KPIs');
   loadLeaflet(function(){{safeCall(renderMap,'Mapa');}});
@@ -535,6 +541,7 @@ function refreshAll(){{
   safeCall(renderTable,'Tabla');
   safeCall(renderTruckChart,'TruckChart');
   safeCall(renderModalChart,'ModalChart');
+  __GREEDY_REFRESH__
 }}
 
 function renderAll(){{
@@ -561,7 +568,133 @@ function renderAll(){{
 </body>
 </html>'''
 
+# =========================================================================
+# Seccion HEURISTICA GREEDY (inyectada via placeholders; llaves normales)
+# =========================================================================
+GREEDY_HTML = r'''
+<div class="section">
+<h2><span class="tag">Heuristica</span> Algoritmo Greedy (en vivo)</h2>
+<div class="desc">Heuristica <b>"cumplir minimos &rarr; llenar el destino mas cercano primero"</b>, recalculada en vivo para la replica seleccionada. Para esta estructura (origen unico, separable por producto, cotas tipo caja) el greedy es <b>optimo</b>: coincide al peso con el modelo LP.</div>
+<div class="formula">
+<div style="font-weight:700;color:#1565c0;font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Algoritmo (por producto j)</div>
+<code>1) asignar el minimo L[i,j] a cada destino i        (obligatorio)
+2) residual  R = P_j - SUM_i L[i,j]
+3) ordenar destinos por costo unitario  c_i = 100 * d_i   (ascendente)
+4) llenar el mas barato primero  hasta  U[i,j] - L[i,j],  hasta agotar R
+Complejidad: O(n log n) por producto. No requiere solver.</code>
+</div>
+<div class="kpis" id="greedykpis"></div>
+<div class="grid g2">
+<div class="card">
+<h3>Llenado greedy paso a paso</h3>
+<div style="display:flex;gap:8px;align-items:center;margin:6px 0 10px;flex-wrap:wrap">
+<button id="gplay" style="padding:6px 14px;border:none;border-radius:8px;background:#1565c0;color:#fff;font-weight:700;cursor:pointer">&#9654; Animar</button>
+<button id="greset" style="padding:6px 14px;border:none;border-radius:8px;background:#64748b;color:#fff;font-weight:700;cursor:pointer">&#8635; Reiniciar</button>
+<span id="gstep" style="font-size:12px;color:#64748b"></span>
+</div>
+<div id="greedyfill" class="chart"></div>
+</div>
+<div class="card"><h3>Greedy vs Optimo LP por replica (brecha = 0)</h3><div id="greedycmp" class="chart"></div></div>
+</div>
+<div class="card" style="margin-top:16px">
+<h3>Traza de decisiones (replica actual)</h3>
+<div style="overflow-x:auto"><table class="tbl" id="greedytrace"><thead><tr><th>#</th><th>Prod</th><th>Destino</th><th>Tipo</th><th>Volumen (m&sup3;)</th><th>Costo unit.</th><th>Costo increm.</th><th>Costo acum.</th></tr></thead><tbody></tbody></table></div>
+</div>
+</div>
+'''
+
+GREEDY_JS = r'''
+function gKey(i,j){return i+'|'+j;}
+function computeGreedy(prod){
+  var dist=SOL.distancias,L=GREEDY.bounds.L,U=GREEDY.bounds.U,ck=GREEDY.costo_km;
+  var alloc={},steps=[];
+  GREEDY.destinos.forEach(function(i){alloc[i]={};GREEDY.productos.forEach(function(j){alloc[i][j]=0;});});
+  GREEDY.productos.forEach(function(j){
+    var dests=GREEDY.destinos.filter(function(i){return (U[gKey(i,j)]||0)>0;});
+    dests.forEach(function(i){var lo=L[gKey(i,j)]||0;if(lo>0){alloc[i][j]=lo;steps.push({producto:j,destino:i,tipo:'minimo',vol:lo,cunit:ck*dist[i]});}});
+    var res=(prod[j]||0)-dests.reduce(function(s,i){return s+(L[gKey(i,j)]||0);},0);
+    dests.slice().sort(function(a,b){return dist[a]-dist[b];}).forEach(function(i){
+      if(res<=1e-9)return;
+      var add=Math.min(res,(U[gKey(i,j)]||0)-alloc[i][j]);
+      if(add>1e-9){alloc[i][j]+=add;res-=add;steps.push({producto:j,destino:i,tipo:'llenado',vol:add,cunit:ck*dist[i]});}
+    });
+  });
+  var cacum=0;steps.forEach(function(s){s.cinc=s.vol*s.cunit;cacum+=s.cinc;s.cacum=cacum;});
+  var cost=0;GREEDY.destinos.forEach(function(i){GREEDY.productos.forEach(function(j){cost+=alloc[i][j]*ck*dist[i];});});
+  return {alloc:alloc,steps:steps,cost:cost};
+}
+function gKpi(l,v,c,cls){return '<div class="kpi '+(cls||'')+'"><div class="lbl">'+l+'</div><div class="val">'+v+'</div><div class="ci">'+c+'</div></div>';}
+var GST={steps:[],k:0,timer:null};
+function renderGreedy(){
+  var ds=getDS();var prod=ds.produccion||SOL.produccion;
+  var g=computeGreedy(prod);GST.steps=g.steps;
+  var lp=ds.costo_total_clp||SOL.costo_total_clp;
+  var gap=g.cost-lp,gp=lp?gap/lp*100:0;
+  document.getElementById('greedykpis').innerHTML=
+    gKpi('Costo Greedy','$'+fmt(g.cost)+' CLP','heuristica (sin solver)','green')+
+    gKpi('Costo Optimo (LP)','$'+fmt(lp)+' CLP','benchmark exacto','')+
+    gKpi('Brecha vs optimo',gp.toFixed(3)+'%','$'+fmt2(gap)+' CLP',(Math.abs(gp)<0.01?'green':'amber'))+
+    gKpi('Decisiones',''+g.steps.length,'pasos del algoritmo','');
+  drawGreedyFill(g.steps.length);renderTrace(-1);
+  var gs=document.getElementById('gstep');if(gs)gs.textContent='';
+}
+function drawGreedyFill(upTo){
+  var el=document.getElementById('greedyfill');if(!el)return;if(!CH.gfill)CH.gfill=echarts.init(el);
+  var dist=SOL.distancias;
+  var dests=GREEDY.destinos.slice().sort(function(a,b){return dist[a]-dist[b];});
+  var acc={};dests.forEach(function(i){acc[i]={P1:0,P2:0,P3:0};});
+  for(var s=0;s<upTo&&s<GST.steps.length;s++){var st=GST.steps[s];acc[st.destino][st.producto]+=st.vol;}
+  var names=dests.map(function(i){return SOL.destinos[i].nombre.replace('Planta ','').replace('Puerto ','P.')+' ('+dist[i].toFixed(0)+'km)';});
+  CH.gfill.setOption({tooltip:{trigger:'axis',axisPointer:{type:'shadow'},valueFormatter:function(v){return fmt(v)+' m3';}},
+    legend:{data:['P1','P2','P3'],top:0},grid:{left:10,right:14,top:30,bottom:0,containLabel:true},
+    xAxis:{type:'value',name:'m3'},yAxis:{type:'category',data:names,axisLabel:{fontSize:10}},
+    series:['P1','P2','P3'].map(function(j){return {name:j,type:'bar',stack:'t',data:dests.map(function(i){return +acc[i][j].toFixed(1);}),itemStyle:{color:COLORS[j]}};})},true);
+}
+function renderTrace(hl){
+  var tb=document.querySelector('#greedytrace tbody');if(!tb)return;
+  tb.innerHTML=GST.steps.map(function(s,idx){
+    var b='<span class="badge '+s.producto.toLowerCase()+'">'+s.producto+'</span>';
+    var tipo=s.tipo==='minimo'?'<span style="color:#64748b">minimo</span>':'<span style="color:#2e7d32">llenado</span>';
+    var bg=idx===hl?' style="background:#fff7e6"':'';
+    return '<tr'+bg+'><td>'+(idx+1)+'</td><td>'+b+'</td><td>'+SOL.destinos[s.destino].nombre+'</td><td>'+tipo+'</td><td>'+fmt(s.vol)+'</td><td>$'+fmt(s.cunit)+'</td><td>$'+fmt(s.cinc)+'</td><td>$'+fmt(s.cacum)+'</td></tr>';
+  }).join('');
+}
+function animateGreedy(){
+  var btn=document.getElementById('gplay');
+  if(GST.timer){clearInterval(GST.timer);GST.timer=null;btn.innerHTML='&#9654; Animar';return;}
+  GST.k=0;btn.innerHTML='&#10074;&#10074; Pausa';
+  GST.timer=setInterval(function(){
+    GST.k++;
+    if(GST.k>GST.steps.length){clearInterval(GST.timer);GST.timer=null;btn.innerHTML='&#9654; Animar';
+      var last=GST.steps.length?GST.steps[GST.steps.length-1].cacum:0;
+      document.getElementById('gstep').textContent='Completado: '+GST.steps.length+' decisiones, costo total $'+fmt(last);return;}
+    drawGreedyFill(GST.k);renderTrace(GST.k-1);
+    var st=GST.steps[GST.k-1];
+    document.getElementById('gstep').innerHTML='Paso '+GST.k+'/'+GST.steps.length+': '+st.producto+' &rarr; '+SOL.destinos[st.destino].nombre+' ('+st.tipo+' +'+fmt(st.vol)+' m3) | acum $'+fmt(st.cacum);
+  },650);
+}
+function resetGreedy(){var btn=document.getElementById('gplay');if(GST.timer){clearInterval(GST.timer);GST.timer=null;}btn.innerHTML='&#9654; Animar';drawGreedyFill(GST.steps.length);renderTrace(-1);var gs=document.getElementById('gstep');if(gs)gs.textContent='';}
+function renderGreedyCompare(){
+  var el=document.getElementById('greedycmp');if(!el)return;if(!CH.gcmp)CH.gcmp=echarts.init(el);
+  var reps=Object.keys(GREEDY.greedy).filter(function(k){return k!=='avg';}).sort();
+  var gd=reps.map(function(k){return Math.round(GREEDY.greedy[k].costo_total_clp);});
+  var lp=reps.map(function(k){return Math.round(GREEDY.greedy[k].lp_costo_clp||0);});
+  CH.gcmp.setOption({tooltip:{trigger:'axis',axisPointer:{type:'shadow'},formatter:function(p){var s=p[0].axisValue+'<br/>';p.forEach(function(i){s+=i.marker+i.seriesName+': $'+fmt(i.value)+'<br/>';});s+='<b>Brecha: $'+fmt(Math.abs(gd[p[0].dataIndex]-lp[p[0].dataIndex]))+'</b>';return s;}},
+    legend:{data:['Greedy','Optimo LP'],top:0},grid:{left:10,right:14,top:30,bottom:0,containLabel:true},
+    xAxis:{type:'category',data:reps.map(function(k){return 'Rep '+k;})},
+    yAxis:{type:'value',axisLabel:{formatter:function(v){return '$'+(v/1e6).toFixed(0)+'M';}}},
+    series:[{name:'Greedy',type:'bar',data:gd,itemStyle:{color:'#2e7d32'},barGap:'10%'},{name:'Optimo LP',type:'bar',data:lp,itemStyle:{color:'#1565c0'}}]},true);
+}
+document.addEventListener('click',function(e){if(!e.target)return;if(e.target.id==='gplay')animateGreedy();else if(e.target.id==='greset')resetGreedy();});
+'''
+
+HTML = (HTML
+        .replace("__GREEDY_DATA__", GREEDY_JSON)
+        .replace("__GREEDY_HTML__", GREEDY_HTML)
+        .replace("__GREEDY_JS__", GREEDY_JS)
+        .replace("__GREEDY_REFRESH__", "safeCall(renderGreedy,'Greedy');safeCall(renderGreedyCompare,'GreedyCmp');"))
+
 OUTPUT = OUT / "dashboard_distribucion.html"
 OUTPUT.write_text(HTML, encoding="utf-8")
 print(f"Dashboard generado: {OUTPUT}")
-print(f"  Tamaño: {OUTPUT.stat().st_size / 1024:.0f} KB")
+print(f"  Tamano: {OUTPUT.stat().st_size / 1024:.0f} KB")

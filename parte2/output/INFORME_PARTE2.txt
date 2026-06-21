@@ -21,6 +21,12 @@ transporte en tractocamion versus ferrocarril para las rutas aplicables.
 Resultado promedio: Costo total minimo = $203,076,644 CLP/ano (10 despachos).
 Desviacion estandar entre replicas: $1,964,206 CLP (CV = 1.0%).
 
+Adicionalmente se implemento una heuristica voraz (Greedy) SIN solver que alcanza
+el MISMO optimo (brecha 0.000% en las 5 replicas), justificada por la estructura
+de mochila continua del problema. Se presenta en vivo en el dashboard, con
+animacion paso a paso del llenado y comparacion directa contra el optimo LP
+(ver Seccion 6).
+
 
 2.  DATOS DE ENTRADA
 ────────────────────────────────────────────────────────────────────────────────
@@ -127,7 +133,59 @@ Desviacion estandar entre replicas: $1,964,206 CLP (CV = 1.0%).
     por su alto costo unitario de transporte (>$14,000 CLP/m³ vs $3,995 CLP/m³).
 
 
-6.  ANALISIS MULTIMODAL: TRACTOCAMION vs FERROCARRIL
+6.  HEURISTICA GREEDY (METODO ALTERNATIVO SIN SOLVER)
+────────────────────────────────────────────────────────────────────────────────
+
+6.1 Motivacion
+    Ademas del modelo LP exacto, se implemento una heuristica voraz (Greedy) que
+    resuelve el mismo problema SIN necesidad de un solver. Como el costo unitario
+    de transporte depende solo del destino (origen unico = Mulchen), el problema
+    es separable por producto y, con cotas tipo caja, tiene la estructura de una
+    MOCHILA CONTINUA, para la cual la regla voraz es OPTIMA.
+
+6.2 Algoritmo (por producto j, de forma independiente)
+    1) Asignar el minimo contractual L_ij a cada destino i (envio obligatorio).
+    2) Calcular el residual  R_j = P_j - Σ_i L_ij.
+    3) Ordenar los destinos por costo unitario  c_i = 100 · d_i  (ascendente).
+    4) Llenar el destino mas barato primero hasta su holgura (U_ij - L_ij),
+       hasta agotar el residual R_j.
+    Complejidad: O(n log n) por producto (dominada por el ordenamiento).
+
+6.3 Optimalidad (argumento de intercambio)
+    Tras cubrir los minimos (costo fijo), el residual se reparte entre destinos a
+    costo unitario constante por destino y con cota superior. Cualquier solucion
+    que use un destino mas caro pudiendo usar uno mas barato con holgura puede
+    mejorarse trasvasando volumen al mas barato; por lo tanto, llenar primero el
+    de menor c_i es optimo. La heuristica alcanza el optimo GLOBAL del LP (no es
+    una mera aproximacion).
+
+6.4 Verificacion: Greedy vs Optimo LP (CLP/ano)
+    Caso        Greedy            Optimo LP         Brecha
+    ─────────────────────────────────────────────────────────
+    Rep 0       203,027,319       203,027,319        0.00
+    Rep 1       203,321,050       203,321,050        0.00
+    Rep 2       207,210,186       207,210,186        0.00
+    Rep 3       201,850,799       201,850,799        0.00
+    Rep 4       201,900,961       201,900,961        0.00
+    Promedio    203,076,644       203,076,644        0.00
+    ─────────────────────────────────────────────────────────
+    Brecha maxima entre replicas: 0.00 CLP (0.000%). El Greedy reproduce el
+    optimo al peso. Ventaja practica: no requiere solver (PuLP/CBC), corre en
+    O(n log n) y se ejecuta EN VIVO en el navegador (dashboard interactivo con
+    animacion paso a paso del llenado y comparacion contra el optimo).
+
+6.5 Ejemplo de traza (promedio) — producto P1 (P1 = 6,928 m³)
+    Paso  Destino             Tipo      Vol (m³)   c_i (CLP/m³)   Acumulado
+    ──────────────────────────────────────────────────────────────────────
+    1     Puerto Coronel      minimo      1,200       14,238      17,085,600
+    2     Reman Coronel       minimo      1,500       14,093      38,225,100
+    3     Reman Los Angeles   minimo      1,300        8,071      48,717,400
+    4     Reman Los Angeles   llenado     2,928        8,071      72,352,355
+    (P2 y P3 analogos: el excedente fluye a Collipulli y Los Angeles, los
+     destinos mas cercanos, mientras los puertos quedan en su minimo.)
+
+
+7.  ANALISIS MULTIMODAL: TRACTOCAMION vs FERROCARRIL
 ────────────────────────────────────────────────────────────────────────────────
 
 6.1 Tractocamion (modo principal)
@@ -199,7 +257,7 @@ Desviacion estandar entre replicas: $1,964,206 CLP (CV = 1.0%).
     Los 14,415 m³ restantes se transportarian en camion (~$56.8M adicionales).
 
 
-7.  TECNOLOGIA Y REPRODUCIBILIDAD
+8.  TECNOLOGIA Y REPRODUCIBILIDAD
 ────────────────────────────────────────────────────────────────────────────────
     Lenguaje:       Python 3.11+
     Solver:         PuLP 3.3 + CBC 2.10.3 (open source)
@@ -210,6 +268,7 @@ Desviacion estandar entre replicas: $1,964,206 CLP (CV = 1.0%).
     Pipeline:
         python3 parte2/kml_parser.py
         python3 parte2/modelo_distribucion.py
+        python3 parte2/heuristica_greedy.py
         python3 parte2/build_dashboard.py
     O bien:
         python3 parte2/run_all.py
@@ -219,7 +278,7 @@ Desviacion estandar entre replicas: $1,964,206 CLP (CV = 1.0%).
              Destino/Ruta (6 destinos individuales o todos)
 
 
-8.  SALIDAS GENERADAS
+9.  SALIDAS GENERADAS
 ────────────────────────────────────────────────────────────────────────────────
     Archivo                                    Contenido
     ───────────────────────────────────────────────────────────────────
@@ -227,11 +286,12 @@ Desviacion estandar entre replicas: $1,964,206 CLP (CV = 1.0%).
     solucion_distribucion.csv                  Plan optimo promedio + camiones
     solucion_distribucion.json                 Datos completos (6 variantes)
     modelo_distribucion.lp                     Formulacion LP exportada
-    output/dashboard_distribucion.html         Dashboard interactivo completo
+    greedy_solucion.json                       Heuristica Greedy + comparacion LP
+    output/dashboard_distribucion.html         Dashboard interactivo (LP + Greedy)
     output/INFORME_PARTE2.txt                  Este informe
 
 
-9.  LIMITACIONES Y SUPUESTOS
+10. LIMITACIONES Y SUPUESTOS
 ────────────────────────────────────────────────────────────────────────────────
     - Costo de transporte LP: $100 CLP/(m³·km) constante, sin economias de
       escala ni diferenciacion por producto.

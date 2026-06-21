@@ -109,7 +109,7 @@ table.tbl tbody tr:hover{background:#f8fafe}
 <div class="wrap">
 <header class="top">
 <h1>Distribucion Optima — CMPC Mulchen</h1>
-<div class="sub">Parte 2 · Programacion Lineal (PuLP + CBC) · Minimizacion de costo de transporte</div>
+<div class="sub">Parte 2 · Heuristica Greedy (en vivo) + Modelo LP optimo (PuLP+CBC) · Minimizacion de costo de transporte</div>
 <div class="controls">
 <div class="cg"><label>Replica</label><select id="repsel"><option value="avg">Promedio 5 replicas</option></select></div>
 <div class="cg"><label>Producto</label><select id="prodsel"><option value="all">Todos (P1+P2+P3)</option><option value="P1">P1 — Mad. verde tratada</option><option value="P2">P2 — Mad. seca clasificada</option><option value="P3">P3 — Mad. impregnada</option></select></div>
@@ -153,6 +153,38 @@ table.tbl tbody tr:hover{background:#f8fafe}
 </div>
 </div>
 </div>
+
+
+<div class="section">
+<h2><span class="tag">Heuristica</span> Algoritmo Greedy (en vivo)</h2>
+<div class="desc">Heuristica <b>"cumplir minimos &rarr; llenar el destino mas cercano primero"</b>, recalculada en vivo para la replica seleccionada. Para esta estructura (origen unico, separable por producto, cotas tipo caja) el greedy es <b>optimo</b>: coincide al peso con el modelo LP.</div>
+<div class="formula">
+<div style="font-weight:700;color:#1565c0;font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Algoritmo (por producto j)</div>
+<code>1) asignar el minimo L[i,j] a cada destino i        (obligatorio)
+2) residual  R = P_j - SUM_i L[i,j]
+3) ordenar destinos por costo unitario  c_i = 100 * d_i   (ascendente)
+4) llenar el mas barato primero  hasta  U[i,j] - L[i,j],  hasta agotar R
+Complejidad: O(n log n) por producto. No requiere solver.</code>
+</div>
+<div class="kpis" id="greedykpis"></div>
+<div class="grid g2">
+<div class="card">
+<h3>Llenado greedy paso a paso</h3>
+<div style="display:flex;gap:8px;align-items:center;margin:6px 0 10px;flex-wrap:wrap">
+<button id="gplay" style="padding:6px 14px;border:none;border-radius:8px;background:#1565c0;color:#fff;font-weight:700;cursor:pointer">&#9654; Animar</button>
+<button id="greset" style="padding:6px 14px;border:none;border-radius:8px;background:#64748b;color:#fff;font-weight:700;cursor:pointer">&#8635; Reiniciar</button>
+<span id="gstep" style="font-size:12px;color:#64748b"></span>
+</div>
+<div id="greedyfill" class="chart"></div>
+</div>
+<div class="card"><h3>Greedy vs Optimo LP por replica (brecha = 0)</h3><div id="greedycmp" class="chart"></div></div>
+</div>
+<div class="card" style="margin-top:16px">
+<h3>Traza de decisiones (replica actual)</h3>
+<div style="overflow-x:auto"><table class="tbl" id="greedytrace"><thead><tr><th>#</th><th>Prod</th><th>Destino</th><th>Tipo</th><th>Volumen (m&sup3;)</th><th>Costo unit.</th><th>Costo increm.</th><th>Costo acum.</th></tr></thead><tbody></tbody></table></div>
+</div>
+</div>
+
 
 <div class="section">
 <h2><span class="tag">Transporte</span> Analisis Multimodal</h2>
@@ -43924,6 +43956,1310 @@ const SOL = {
     "produccion_total_m3": 22115.24
   }
 };
+const GREEDY = {
+  "costo_km": 100.0,
+  "destinos": [
+    "Puerto_Coronel",
+    "Puerto_San_Vicente",
+    "Puerto_Lirquen",
+    "Reman_Coronel",
+    "Reman_Los_Angeles",
+    "Plywood_Collipulli"
+  ],
+  "productos": [
+    "P1",
+    "P2",
+    "P3"
+  ],
+  "distancias": {
+    "Plywood_Collipulli": 39.95,
+    "Reman_Los_Angeles": 80.71,
+    "Reman_Coronel": 140.93,
+    "Puerto_Coronel": 142.38,
+    "Puerto_San_Vicente": 175.86,
+    "Puerto_Lirquen": 172.6
+  },
+  "bounds": {
+    "L": {
+      "Puerto_Coronel|P1": 1200.0,
+      "Puerto_Coronel|P3": 1200.0,
+      "Puerto_San_Vicente|P2": 1500.0,
+      "Puerto_San_Vicente|P3": 800.0,
+      "Puerto_Lirquen|P2": 1500.0,
+      "Reman_Coronel|P1": 1500.0,
+      "Reman_Los_Angeles|P1": 1300.0,
+      "Reman_Los_Angeles|P2": 1500.0,
+      "Plywood_Collipulli|P2": 1500.0,
+      "Plywood_Collipulli|P3": 1000.0
+    },
+    "U": {
+      "Puerto_Coronel|P1": 12000.0,
+      "Puerto_Coronel|P3": 10000.0,
+      "Puerto_San_Vicente|P2": 8000.0,
+      "Puerto_San_Vicente|P3": 12000.0,
+      "Puerto_Lirquen|P2": 8000.0,
+      "Reman_Coronel|P1": 8000.0,
+      "Reman_Los_Angeles|P1": 6000.0,
+      "Reman_Los_Angeles|P2": 5000.0,
+      "Plywood_Collipulli|P2": 5000.0,
+      "Plywood_Collipulli|P3": 4000.0
+    }
+  },
+  "greedy": {
+    "0": {
+      "despachos": [
+        {
+          "destino": "Puerto_Coronel",
+          "producto": "P1",
+          "distancia_km": 142.38,
+          "volumen_m3": 1200.0,
+          "costo_clp": 17085600.0
+        },
+        {
+          "destino": "Reman_Coronel",
+          "producto": "P1",
+          "distancia_km": 140.93,
+          "volumen_m3": 1500.0,
+          "costo_clp": 21139500.0
+        },
+        {
+          "destino": "Reman_Los_Angeles",
+          "producto": "P1",
+          "distancia_km": 80.71,
+          "volumen_m3": 4400.14,
+          "costo_clp": 35513529.94
+        },
+        {
+          "destino": "Puerto_San_Vicente",
+          "producto": "P2",
+          "distancia_km": 175.86,
+          "volumen_m3": 1500.0,
+          "costo_clp": 26379000.0
+        },
+        {
+          "destino": "Puerto_Lirquen",
+          "producto": "P2",
+          "distancia_km": 172.6,
+          "volumen_m3": 1500.0,
+          "costo_clp": 25890000.0
+        },
+        {
+          "destino": "Reman_Los_Angeles",
+          "producto": "P2",
+          "distancia_km": 80.71,
+          "volumen_m3": 1500.0,
+          "costo_clp": 12106500.0
+        },
+        {
+          "destino": "Plywood_Collipulli",
+          "producto": "P2",
+          "distancia_km": 39.95,
+          "volumen_m3": 4527.21,
+          "costo_clp": 18086203.95
+        },
+        {
+          "destino": "Puerto_Coronel",
+          "producto": "P3",
+          "distancia_km": 142.38,
+          "volumen_m3": 1200.0,
+          "costo_clp": 17085600.0
+        },
+        {
+          "destino": "Puerto_San_Vicente",
+          "producto": "P3",
+          "distancia_km": 175.86,
+          "volumen_m3": 800.0,
+          "costo_clp": 14068800.0
+        },
+        {
+          "destino": "Plywood_Collipulli",
+          "producto": "P3",
+          "distancia_km": 39.95,
+          "volumen_m3": 3923.05,
+          "costo_clp": 15672584.75
+        }
+      ],
+      "steps": [
+        {
+          "producto": "P1",
+          "destino": "Puerto_Coronel",
+          "tipo": "minimo",
+          "vol": 1200.0,
+          "cunit": 14238.0,
+          "cinc": 17085600.0,
+          "cacum": 17085600.0
+        },
+        {
+          "producto": "P1",
+          "destino": "Reman_Coronel",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 14093.0,
+          "cinc": 21139500.0,
+          "cacum": 38225100.0
+        },
+        {
+          "producto": "P1",
+          "destino": "Reman_Los_Angeles",
+          "tipo": "minimo",
+          "vol": 1300.0,
+          "cunit": 8071.0,
+          "cinc": 10492300.0,
+          "cacum": 48717400.0
+        },
+        {
+          "producto": "P1",
+          "destino": "Reman_Los_Angeles",
+          "tipo": "llenado",
+          "vol": 3100.14,
+          "cunit": 8071.0,
+          "cinc": 25021229.94,
+          "cacum": 73738629.94
+        },
+        {
+          "producto": "P2",
+          "destino": "Puerto_San_Vicente",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 17586.0,
+          "cinc": 26379000.0,
+          "cacum": 100117629.94
+        },
+        {
+          "producto": "P2",
+          "destino": "Puerto_Lirquen",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 17260.0,
+          "cinc": 25890000.0,
+          "cacum": 126007629.94
+        },
+        {
+          "producto": "P2",
+          "destino": "Reman_Los_Angeles",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 8071.0,
+          "cinc": 12106500.0,
+          "cacum": 138114129.94
+        },
+        {
+          "producto": "P2",
+          "destino": "Plywood_Collipulli",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 3995.0,
+          "cinc": 5992500.0,
+          "cacum": 144106629.94
+        },
+        {
+          "producto": "P2",
+          "destino": "Plywood_Collipulli",
+          "tipo": "llenado",
+          "vol": 3027.21,
+          "cunit": 3995.0,
+          "cinc": 12093703.95,
+          "cacum": 156200333.89
+        },
+        {
+          "producto": "P3",
+          "destino": "Puerto_Coronel",
+          "tipo": "minimo",
+          "vol": 1200.0,
+          "cunit": 14238.0,
+          "cinc": 17085600.0,
+          "cacum": 173285933.89
+        },
+        {
+          "producto": "P3",
+          "destino": "Puerto_San_Vicente",
+          "tipo": "minimo",
+          "vol": 800.0,
+          "cunit": 17586.0,
+          "cinc": 14068800.0,
+          "cacum": 187354733.89
+        },
+        {
+          "producto": "P3",
+          "destino": "Plywood_Collipulli",
+          "tipo": "minimo",
+          "vol": 1000.0,
+          "cunit": 3995.0,
+          "cinc": 3995000.0,
+          "cacum": 191349733.89
+        },
+        {
+          "producto": "P3",
+          "destino": "Plywood_Collipulli",
+          "tipo": "llenado",
+          "vol": 2923.05,
+          "cunit": 3995.0,
+          "cinc": 11677584.75,
+          "cacum": 203027318.64
+        }
+      ],
+      "costo_total_clp": 203027318.64,
+      "lp_costo_clp": 203027318.64,
+      "gap_clp": 0.0,
+      "produccion": {
+        "P1": 7100.14,
+        "P2": 9027.21,
+        "P3": 5923.05
+      }
+    },
+    "1": {
+      "despachos": [
+        {
+          "destino": "Puerto_Coronel",
+          "producto": "P1",
+          "distancia_km": 142.38,
+          "volumen_m3": 1200.0,
+          "costo_clp": 17085600.0
+        },
+        {
+          "destino": "Reman_Coronel",
+          "producto": "P1",
+          "distancia_km": 140.93,
+          "volumen_m3": 1500.0,
+          "costo_clp": 21139500.0
+        },
+        {
+          "destino": "Reman_Los_Angeles",
+          "producto": "P1",
+          "distancia_km": 80.71,
+          "volumen_m3": 4473.98,
+          "costo_clp": 36109492.58
+        },
+        {
+          "destino": "Puerto_San_Vicente",
+          "producto": "P2",
+          "distancia_km": 175.86,
+          "volumen_m3": 1500.0,
+          "costo_clp": 26379000.0
+        },
+        {
+          "destino": "Puerto_Lirquen",
+          "producto": "P2",
+          "distancia_km": 172.6,
+          "volumen_m3": 1500.0,
+          "costo_clp": 25890000.0
+        },
+        {
+          "destino": "Reman_Los_Angeles",
+          "producto": "P2",
+          "distancia_km": 80.71,
+          "volumen_m3": 1527.5,
+          "costo_clp": 12328452.5
+        },
+        {
+          "destino": "Plywood_Collipulli",
+          "producto": "P2",
+          "distancia_km": 39.95,
+          "volumen_m3": 5000.0,
+          "costo_clp": 19975000.0
+        },
+        {
+          "destino": "Puerto_Coronel",
+          "producto": "P3",
+          "distancia_km": 142.38,
+          "volumen_m3": 1200.0,
+          "costo_clp": 17085600.0
+        },
+        {
+          "destino": "Puerto_San_Vicente",
+          "producto": "P3",
+          "distancia_km": 175.86,
+          "volumen_m3": 800.0,
+          "costo_clp": 14068800.0
+        },
+        {
+          "destino": "Plywood_Collipulli",
+          "producto": "P3",
+          "distancia_km": 39.95,
+          "volumen_m3": 3319.05,
+          "costo_clp": 13259604.75
+        }
+      ],
+      "steps": [
+        {
+          "producto": "P1",
+          "destino": "Puerto_Coronel",
+          "tipo": "minimo",
+          "vol": 1200.0,
+          "cunit": 14238.0,
+          "cinc": 17085600.0,
+          "cacum": 17085600.0
+        },
+        {
+          "producto": "P1",
+          "destino": "Reman_Coronel",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 14093.0,
+          "cinc": 21139500.0,
+          "cacum": 38225100.0
+        },
+        {
+          "producto": "P1",
+          "destino": "Reman_Los_Angeles",
+          "tipo": "minimo",
+          "vol": 1300.0,
+          "cunit": 8071.0,
+          "cinc": 10492300.0,
+          "cacum": 48717400.0
+        },
+        {
+          "producto": "P1",
+          "destino": "Reman_Los_Angeles",
+          "tipo": "llenado",
+          "vol": 3173.98,
+          "cunit": 8071.0,
+          "cinc": 25617192.58,
+          "cacum": 74334592.58
+        },
+        {
+          "producto": "P2",
+          "destino": "Puerto_San_Vicente",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 17586.0,
+          "cinc": 26379000.0,
+          "cacum": 100713592.58
+        },
+        {
+          "producto": "P2",
+          "destino": "Puerto_Lirquen",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 17260.0,
+          "cinc": 25890000.0,
+          "cacum": 126603592.58
+        },
+        {
+          "producto": "P2",
+          "destino": "Reman_Los_Angeles",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 8071.0,
+          "cinc": 12106500.0,
+          "cacum": 138710092.58
+        },
+        {
+          "producto": "P2",
+          "destino": "Plywood_Collipulli",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 3995.0,
+          "cinc": 5992500.0,
+          "cacum": 144702592.58
+        },
+        {
+          "producto": "P2",
+          "destino": "Plywood_Collipulli",
+          "tipo": "llenado",
+          "vol": 3500.0,
+          "cunit": 3995.0,
+          "cinc": 13982500.0,
+          "cacum": 158685092.58
+        },
+        {
+          "producto": "P2",
+          "destino": "Reman_Los_Angeles",
+          "tipo": "llenado",
+          "vol": 27.5,
+          "cunit": 8071.0,
+          "cinc": 221952.5,
+          "cacum": 158907045.08
+        },
+        {
+          "producto": "P3",
+          "destino": "Puerto_Coronel",
+          "tipo": "minimo",
+          "vol": 1200.0,
+          "cunit": 14238.0,
+          "cinc": 17085600.0,
+          "cacum": 175992645.08
+        },
+        {
+          "producto": "P3",
+          "destino": "Puerto_San_Vicente",
+          "tipo": "minimo",
+          "vol": 800.0,
+          "cunit": 17586.0,
+          "cinc": 14068800.0,
+          "cacum": 190061445.08
+        },
+        {
+          "producto": "P3",
+          "destino": "Plywood_Collipulli",
+          "tipo": "minimo",
+          "vol": 1000.0,
+          "cunit": 3995.0,
+          "cinc": 3995000.0,
+          "cacum": 194056445.08
+        },
+        {
+          "producto": "P3",
+          "destino": "Plywood_Collipulli",
+          "tipo": "llenado",
+          "vol": 2319.05,
+          "cunit": 3995.0,
+          "cinc": 9264604.75,
+          "cacum": 203321049.83
+        }
+      ],
+      "costo_total_clp": 203321049.83,
+      "lp_costo_clp": 203321049.83,
+      "gap_clp": 0.0,
+      "produccion": {
+        "P1": 7173.98,
+        "P2": 9527.5,
+        "P3": 5319.05
+      }
+    },
+    "2": {
+      "despachos": [
+        {
+          "destino": "Puerto_Coronel",
+          "producto": "P1",
+          "distancia_km": 142.38,
+          "volumen_m3": 1200.0,
+          "costo_clp": 17085600.0
+        },
+        {
+          "destino": "Reman_Coronel",
+          "producto": "P1",
+          "distancia_km": 140.93,
+          "volumen_m3": 1500.0,
+          "costo_clp": 21139500.0
+        },
+        {
+          "destino": "Reman_Los_Angeles",
+          "producto": "P1",
+          "distancia_km": 80.71,
+          "volumen_m3": 4533.45,
+          "costo_clp": 36589474.95
+        },
+        {
+          "destino": "Puerto_San_Vicente",
+          "producto": "P2",
+          "distancia_km": 175.86,
+          "volumen_m3": 1500.0,
+          "costo_clp": 26379000.0
+        },
+        {
+          "destino": "Puerto_Lirquen",
+          "producto": "P2",
+          "distancia_km": 172.6,
+          "volumen_m3": 1500.0,
+          "costo_clp": 25890000.0
+        },
+        {
+          "destino": "Reman_Los_Angeles",
+          "producto": "P2",
+          "distancia_km": 80.71,
+          "volumen_m3": 2019.48,
+          "costo_clp": 16299223.08
+        },
+        {
+          "destino": "Plywood_Collipulli",
+          "producto": "P2",
+          "distancia_km": 39.95,
+          "volumen_m3": 5000.0,
+          "costo_clp": 19975000.0
+        },
+        {
+          "destino": "Puerto_Coronel",
+          "producto": "P3",
+          "distancia_km": 142.38,
+          "volumen_m3": 1200.0,
+          "costo_clp": 17085600.0
+        },
+        {
+          "destino": "Puerto_San_Vicente",
+          "producto": "P3",
+          "distancia_km": 175.86,
+          "volumen_m3": 800.0,
+          "costo_clp": 14068800.0
+        },
+        {
+          "destino": "Plywood_Collipulli",
+          "producto": "P3",
+          "distancia_km": 39.95,
+          "volumen_m3": 3178.47,
+          "costo_clp": 12697987.65
+        }
+      ],
+      "steps": [
+        {
+          "producto": "P1",
+          "destino": "Puerto_Coronel",
+          "tipo": "minimo",
+          "vol": 1200.0,
+          "cunit": 14238.0,
+          "cinc": 17085600.0,
+          "cacum": 17085600.0
+        },
+        {
+          "producto": "P1",
+          "destino": "Reman_Coronel",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 14093.0,
+          "cinc": 21139500.0,
+          "cacum": 38225100.0
+        },
+        {
+          "producto": "P1",
+          "destino": "Reman_Los_Angeles",
+          "tipo": "minimo",
+          "vol": 1300.0,
+          "cunit": 8071.0,
+          "cinc": 10492300.0,
+          "cacum": 48717400.0
+        },
+        {
+          "producto": "P1",
+          "destino": "Reman_Los_Angeles",
+          "tipo": "llenado",
+          "vol": 3233.45,
+          "cunit": 8071.0,
+          "cinc": 26097174.95,
+          "cacum": 74814574.95
+        },
+        {
+          "producto": "P2",
+          "destino": "Puerto_San_Vicente",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 17586.0,
+          "cinc": 26379000.0,
+          "cacum": 101193574.95
+        },
+        {
+          "producto": "P2",
+          "destino": "Puerto_Lirquen",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 17260.0,
+          "cinc": 25890000.0,
+          "cacum": 127083574.95
+        },
+        {
+          "producto": "P2",
+          "destino": "Reman_Los_Angeles",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 8071.0,
+          "cinc": 12106500.0,
+          "cacum": 139190074.95
+        },
+        {
+          "producto": "P2",
+          "destino": "Plywood_Collipulli",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 3995.0,
+          "cinc": 5992500.0,
+          "cacum": 145182574.95
+        },
+        {
+          "producto": "P2",
+          "destino": "Plywood_Collipulli",
+          "tipo": "llenado",
+          "vol": 3500.0,
+          "cunit": 3995.0,
+          "cinc": 13982500.0,
+          "cacum": 159165074.95
+        },
+        {
+          "producto": "P2",
+          "destino": "Reman_Los_Angeles",
+          "tipo": "llenado",
+          "vol": 519.48,
+          "cunit": 8071.0,
+          "cinc": 4192723.08,
+          "cacum": 163357798.03
+        },
+        {
+          "producto": "P3",
+          "destino": "Puerto_Coronel",
+          "tipo": "minimo",
+          "vol": 1200.0,
+          "cunit": 14238.0,
+          "cinc": 17085600.0,
+          "cacum": 180443398.03
+        },
+        {
+          "producto": "P3",
+          "destino": "Puerto_San_Vicente",
+          "tipo": "minimo",
+          "vol": 800.0,
+          "cunit": 17586.0,
+          "cinc": 14068800.0,
+          "cacum": 194512198.03
+        },
+        {
+          "producto": "P3",
+          "destino": "Plywood_Collipulli",
+          "tipo": "minimo",
+          "vol": 1000.0,
+          "cunit": 3995.0,
+          "cinc": 3995000.0,
+          "cacum": 198507198.03
+        },
+        {
+          "producto": "P3",
+          "destino": "Plywood_Collipulli",
+          "tipo": "llenado",
+          "vol": 2178.47,
+          "cunit": 3995.0,
+          "cinc": 8702987.65,
+          "cacum": 207210185.68
+        }
+      ],
+      "costo_total_clp": 207210185.68,
+      "lp_costo_clp": 207210185.68,
+      "gap_clp": 0.0,
+      "produccion": {
+        "P1": 7233.45,
+        "P2": 10019.48,
+        "P3": 5178.47
+      }
+    },
+    "3": {
+      "despachos": [
+        {
+          "destino": "Puerto_Coronel",
+          "producto": "P1",
+          "distancia_km": 142.38,
+          "volumen_m3": 1200.0,
+          "costo_clp": 17085600.0
+        },
+        {
+          "destino": "Reman_Coronel",
+          "producto": "P1",
+          "distancia_km": 140.93,
+          "volumen_m3": 1500.0,
+          "costo_clp": 21139500.0
+        },
+        {
+          "destino": "Reman_Los_Angeles",
+          "producto": "P1",
+          "distancia_km": 80.71,
+          "volumen_m3": 3895.95,
+          "costo_clp": 31444212.45
+        },
+        {
+          "destino": "Puerto_San_Vicente",
+          "producto": "P2",
+          "distancia_km": 175.86,
+          "volumen_m3": 1500.0,
+          "costo_clp": 26379000.0
+        },
+        {
+          "destino": "Puerto_Lirquen",
+          "producto": "P2",
+          "distancia_km": 172.6,
+          "volumen_m3": 1500.0,
+          "costo_clp": 25890000.0
+        },
+        {
+          "destino": "Reman_Los_Angeles",
+          "producto": "P2",
+          "distancia_km": 80.71,
+          "volumen_m3": 1847.94,
+          "costo_clp": 14914723.74
+        },
+        {
+          "destino": "Plywood_Collipulli",
+          "producto": "P2",
+          "distancia_km": 39.95,
+          "volumen_m3": 5000.0,
+          "costo_clp": 19975000.0
+        },
+        {
+          "destino": "Puerto_Coronel",
+          "producto": "P3",
+          "distancia_km": 142.38,
+          "volumen_m3": 1200.0,
+          "costo_clp": 17085600.0
+        },
+        {
+          "destino": "Puerto_San_Vicente",
+          "producto": "P3",
+          "distancia_km": 175.86,
+          "volumen_m3": 800.0,
+          "costo_clp": 14068800.0
+        },
+        {
+          "destino": "Plywood_Collipulli",
+          "producto": "P3",
+          "distancia_km": 39.95,
+          "volumen_m3": 3471.43,
+          "costo_clp": 13868362.85
+        }
+      ],
+      "steps": [
+        {
+          "producto": "P1",
+          "destino": "Puerto_Coronel",
+          "tipo": "minimo",
+          "vol": 1200.0,
+          "cunit": 14238.0,
+          "cinc": 17085600.0,
+          "cacum": 17085600.0
+        },
+        {
+          "producto": "P1",
+          "destino": "Reman_Coronel",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 14093.0,
+          "cinc": 21139500.0,
+          "cacum": 38225100.0
+        },
+        {
+          "producto": "P1",
+          "destino": "Reman_Los_Angeles",
+          "tipo": "minimo",
+          "vol": 1300.0,
+          "cunit": 8071.0,
+          "cinc": 10492300.0,
+          "cacum": 48717400.0
+        },
+        {
+          "producto": "P1",
+          "destino": "Reman_Los_Angeles",
+          "tipo": "llenado",
+          "vol": 2595.95,
+          "cunit": 8071.0,
+          "cinc": 20951912.45,
+          "cacum": 69669312.45
+        },
+        {
+          "producto": "P2",
+          "destino": "Puerto_San_Vicente",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 17586.0,
+          "cinc": 26379000.0,
+          "cacum": 96048312.45
+        },
+        {
+          "producto": "P2",
+          "destino": "Puerto_Lirquen",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 17260.0,
+          "cinc": 25890000.0,
+          "cacum": 121938312.45
+        },
+        {
+          "producto": "P2",
+          "destino": "Reman_Los_Angeles",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 8071.0,
+          "cinc": 12106500.0,
+          "cacum": 134044812.45
+        },
+        {
+          "producto": "P2",
+          "destino": "Plywood_Collipulli",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 3995.0,
+          "cinc": 5992500.0,
+          "cacum": 140037312.45
+        },
+        {
+          "producto": "P2",
+          "destino": "Plywood_Collipulli",
+          "tipo": "llenado",
+          "vol": 3500.0,
+          "cunit": 3995.0,
+          "cinc": 13982500.0,
+          "cacum": 154019812.45
+        },
+        {
+          "producto": "P2",
+          "destino": "Reman_Los_Angeles",
+          "tipo": "llenado",
+          "vol": 347.94,
+          "cunit": 8071.0,
+          "cinc": 2808223.74,
+          "cacum": 156828036.19
+        },
+        {
+          "producto": "P3",
+          "destino": "Puerto_Coronel",
+          "tipo": "minimo",
+          "vol": 1200.0,
+          "cunit": 14238.0,
+          "cinc": 17085600.0,
+          "cacum": 173913636.19
+        },
+        {
+          "producto": "P3",
+          "destino": "Puerto_San_Vicente",
+          "tipo": "minimo",
+          "vol": 800.0,
+          "cunit": 17586.0,
+          "cinc": 14068800.0,
+          "cacum": 187982436.19
+        },
+        {
+          "producto": "P3",
+          "destino": "Plywood_Collipulli",
+          "tipo": "minimo",
+          "vol": 1000.0,
+          "cunit": 3995.0,
+          "cinc": 3995000.0,
+          "cacum": 191977436.19
+        },
+        {
+          "producto": "P3",
+          "destino": "Plywood_Collipulli",
+          "tipo": "llenado",
+          "vol": 2471.43,
+          "cunit": 3995.0,
+          "cinc": 9873362.85,
+          "cacum": 201850799.04
+        }
+      ],
+      "costo_total_clp": 201850799.04,
+      "lp_costo_clp": 201850799.04,
+      "gap_clp": 0.0,
+      "produccion": {
+        "P1": 6595.95,
+        "P2": 9847.94,
+        "P3": 5471.43
+      }
+    },
+    "4": {
+      "despachos": [
+        {
+          "destino": "Puerto_Coronel",
+          "producto": "P1",
+          "distancia_km": 142.38,
+          "volumen_m3": 1200.0,
+          "costo_clp": 17085600.0
+        },
+        {
+          "destino": "Reman_Coronel",
+          "producto": "P1",
+          "distancia_km": 140.93,
+          "volumen_m3": 1500.0,
+          "costo_clp": 21139500.0
+        },
+        {
+          "destino": "Reman_Los_Angeles",
+          "producto": "P1",
+          "distancia_km": 80.71,
+          "volumen_m3": 3838.39,
+          "costo_clp": 30979645.69
+        },
+        {
+          "destino": "Puerto_San_Vicente",
+          "producto": "P2",
+          "distancia_km": 175.86,
+          "volumen_m3": 1500.0,
+          "costo_clp": 26379000.0
+        },
+        {
+          "destino": "Puerto_Lirquen",
+          "producto": "P2",
+          "distancia_km": 172.6,
+          "volumen_m3": 1500.0,
+          "costo_clp": 25890000.0
+        },
+        {
+          "destino": "Reman_Los_Angeles",
+          "producto": "P2",
+          "distancia_km": 80.71,
+          "volumen_m3": 1679.42,
+          "costo_clp": 13554598.82
+        },
+        {
+          "destino": "Plywood_Collipulli",
+          "producto": "P2",
+          "distancia_km": 39.95,
+          "volumen_m3": 5000.0,
+          "costo_clp": 19975000.0
+        },
+        {
+          "destino": "Puerto_Coronel",
+          "producto": "P3",
+          "distancia_km": 142.38,
+          "volumen_m3": 1200.0,
+          "costo_clp": 17085600.0
+        },
+        {
+          "destino": "Puerto_San_Vicente",
+          "producto": "P3",
+          "distancia_km": 175.86,
+          "volumen_m3": 800.0,
+          "costo_clp": 14068800.0
+        },
+        {
+          "destino": "Plywood_Collipulli",
+          "producto": "P3",
+          "distancia_km": 39.95,
+          "volumen_m3": 3940.73,
+          "costo_clp": 15743216.35
+        }
+      ],
+      "steps": [
+        {
+          "producto": "P1",
+          "destino": "Puerto_Coronel",
+          "tipo": "minimo",
+          "vol": 1200.0,
+          "cunit": 14238.0,
+          "cinc": 17085600.0,
+          "cacum": 17085600.0
+        },
+        {
+          "producto": "P1",
+          "destino": "Reman_Coronel",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 14093.0,
+          "cinc": 21139500.0,
+          "cacum": 38225100.0
+        },
+        {
+          "producto": "P1",
+          "destino": "Reman_Los_Angeles",
+          "tipo": "minimo",
+          "vol": 1300.0,
+          "cunit": 8071.0,
+          "cinc": 10492300.0,
+          "cacum": 48717400.0
+        },
+        {
+          "producto": "P1",
+          "destino": "Reman_Los_Angeles",
+          "tipo": "llenado",
+          "vol": 2538.39,
+          "cunit": 8071.0,
+          "cinc": 20487345.69,
+          "cacum": 69204745.69
+        },
+        {
+          "producto": "P2",
+          "destino": "Puerto_San_Vicente",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 17586.0,
+          "cinc": 26379000.0,
+          "cacum": 95583745.69
+        },
+        {
+          "producto": "P2",
+          "destino": "Puerto_Lirquen",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 17260.0,
+          "cinc": 25890000.0,
+          "cacum": 121473745.69
+        },
+        {
+          "producto": "P2",
+          "destino": "Reman_Los_Angeles",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 8071.0,
+          "cinc": 12106500.0,
+          "cacum": 133580245.69
+        },
+        {
+          "producto": "P2",
+          "destino": "Plywood_Collipulli",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 3995.0,
+          "cinc": 5992500.0,
+          "cacum": 139572745.69
+        },
+        {
+          "producto": "P2",
+          "destino": "Plywood_Collipulli",
+          "tipo": "llenado",
+          "vol": 3500.0,
+          "cunit": 3995.0,
+          "cinc": 13982500.0,
+          "cacum": 153555245.69
+        },
+        {
+          "producto": "P2",
+          "destino": "Reman_Los_Angeles",
+          "tipo": "llenado",
+          "vol": 179.42,
+          "cunit": 8071.0,
+          "cinc": 1448098.82,
+          "cacum": 155003344.51
+        },
+        {
+          "producto": "P3",
+          "destino": "Puerto_Coronel",
+          "tipo": "minimo",
+          "vol": 1200.0,
+          "cunit": 14238.0,
+          "cinc": 17085600.0,
+          "cacum": 172088944.51
+        },
+        {
+          "producto": "P3",
+          "destino": "Puerto_San_Vicente",
+          "tipo": "minimo",
+          "vol": 800.0,
+          "cunit": 17586.0,
+          "cinc": 14068800.0,
+          "cacum": 186157744.51
+        },
+        {
+          "producto": "P3",
+          "destino": "Plywood_Collipulli",
+          "tipo": "minimo",
+          "vol": 1000.0,
+          "cunit": 3995.0,
+          "cinc": 3995000.0,
+          "cacum": 190152744.51
+        },
+        {
+          "producto": "P3",
+          "destino": "Plywood_Collipulli",
+          "tipo": "llenado",
+          "vol": 2940.73,
+          "cunit": 3995.0,
+          "cinc": 11748216.35,
+          "cacum": 201900960.86
+        }
+      ],
+      "costo_total_clp": 201900960.86,
+      "lp_costo_clp": 201900960.86,
+      "gap_clp": 0.0,
+      "produccion": {
+        "P1": 6538.39,
+        "P2": 9679.42,
+        "P3": 5940.73
+      }
+    },
+    "avg": {
+      "despachos": [
+        {
+          "destino": "Puerto_Coronel",
+          "producto": "P1",
+          "distancia_km": 142.38,
+          "volumen_m3": 1200.0,
+          "costo_clp": 17085600.0
+        },
+        {
+          "destino": "Reman_Coronel",
+          "producto": "P1",
+          "distancia_km": 140.93,
+          "volumen_m3": 1500.0,
+          "costo_clp": 21139500.0
+        },
+        {
+          "destino": "Reman_Los_Angeles",
+          "producto": "P1",
+          "distancia_km": 80.71,
+          "volumen_m3": 4228.38,
+          "costo_clp": 34127254.98
+        },
+        {
+          "destino": "Puerto_San_Vicente",
+          "producto": "P2",
+          "distancia_km": 175.86,
+          "volumen_m3": 1500.0,
+          "costo_clp": 26379000.0
+        },
+        {
+          "destino": "Puerto_Lirquen",
+          "producto": "P2",
+          "distancia_km": 172.6,
+          "volumen_m3": 1500.0,
+          "costo_clp": 25890000.0
+        },
+        {
+          "destino": "Reman_Los_Angeles",
+          "producto": "P2",
+          "distancia_km": 80.71,
+          "volumen_m3": 1620.31,
+          "costo_clp": 13077522.01
+        },
+        {
+          "destino": "Plywood_Collipulli",
+          "producto": "P2",
+          "distancia_km": 39.95,
+          "volumen_m3": 5000.0,
+          "costo_clp": 19975000.0
+        },
+        {
+          "destino": "Puerto_Coronel",
+          "producto": "P3",
+          "distancia_km": 142.38,
+          "volumen_m3": 1200.0,
+          "costo_clp": 17085600.0
+        },
+        {
+          "destino": "Puerto_San_Vicente",
+          "producto": "P3",
+          "distancia_km": 175.86,
+          "volumen_m3": 800.0,
+          "costo_clp": 14068800.0
+        },
+        {
+          "destino": "Plywood_Collipulli",
+          "producto": "P3",
+          "distancia_km": 39.95,
+          "volumen_m3": 3566.55,
+          "costo_clp": 14248367.25
+        }
+      ],
+      "steps": [
+        {
+          "producto": "P1",
+          "destino": "Puerto_Coronel",
+          "tipo": "minimo",
+          "vol": 1200.0,
+          "cunit": 14238.0,
+          "cinc": 17085600.0,
+          "cacum": 17085600.0
+        },
+        {
+          "producto": "P1",
+          "destino": "Reman_Coronel",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 14093.0,
+          "cinc": 21139500.0,
+          "cacum": 38225100.0
+        },
+        {
+          "producto": "P1",
+          "destino": "Reman_Los_Angeles",
+          "tipo": "minimo",
+          "vol": 1300.0,
+          "cunit": 8071.0,
+          "cinc": 10492300.0,
+          "cacum": 48717400.0
+        },
+        {
+          "producto": "P1",
+          "destino": "Reman_Los_Angeles",
+          "tipo": "llenado",
+          "vol": 2928.38,
+          "cunit": 8071.0,
+          "cinc": 23634954.98,
+          "cacum": 72352354.98
+        },
+        {
+          "producto": "P2",
+          "destino": "Puerto_San_Vicente",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 17586.0,
+          "cinc": 26379000.0,
+          "cacum": 98731354.98
+        },
+        {
+          "producto": "P2",
+          "destino": "Puerto_Lirquen",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 17260.0,
+          "cinc": 25890000.0,
+          "cacum": 124621354.98
+        },
+        {
+          "producto": "P2",
+          "destino": "Reman_Los_Angeles",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 8071.0,
+          "cinc": 12106500.0,
+          "cacum": 136727854.98
+        },
+        {
+          "producto": "P2",
+          "destino": "Plywood_Collipulli",
+          "tipo": "minimo",
+          "vol": 1500.0,
+          "cunit": 3995.0,
+          "cinc": 5992500.0,
+          "cacum": 142720354.98
+        },
+        {
+          "producto": "P2",
+          "destino": "Plywood_Collipulli",
+          "tipo": "llenado",
+          "vol": 3500.0,
+          "cunit": 3995.0,
+          "cinc": 13982500.0,
+          "cacum": 156702854.98
+        },
+        {
+          "producto": "P2",
+          "destino": "Reman_Los_Angeles",
+          "tipo": "llenado",
+          "vol": 120.31,
+          "cunit": 8071.0,
+          "cinc": 971022.01,
+          "cacum": 157673876.99
+        },
+        {
+          "producto": "P3",
+          "destino": "Puerto_Coronel",
+          "tipo": "minimo",
+          "vol": 1200.0,
+          "cunit": 14238.0,
+          "cinc": 17085600.0,
+          "cacum": 174759476.99
+        },
+        {
+          "producto": "P3",
+          "destino": "Puerto_San_Vicente",
+          "tipo": "minimo",
+          "vol": 800.0,
+          "cunit": 17586.0,
+          "cinc": 14068800.0,
+          "cacum": 188828276.99
+        },
+        {
+          "producto": "P3",
+          "destino": "Plywood_Collipulli",
+          "tipo": "minimo",
+          "vol": 1000.0,
+          "cunit": 3995.0,
+          "cinc": 3995000.0,
+          "cacum": 192823276.99
+        },
+        {
+          "producto": "P3",
+          "destino": "Plywood_Collipulli",
+          "tipo": "llenado",
+          "vol": 2566.55,
+          "cunit": 3995.0,
+          "cinc": 10253367.25,
+          "cacum": 203076644.24
+        }
+      ],
+      "costo_total_clp": 203076644.24,
+      "lp_costo_clp": 203076644.24,
+      "gap_clp": 0.0,
+      "produccion": {
+        "P1": 6928.38,
+        "P2": 9620.31,
+        "P3": 5566.55
+      }
+    }
+  },
+  "max_gap_clp": 0.0
+};
 const CH = {};
 const COLORS = {P1:'#1565c0',P2:'#2e7d32',P3:'#ef6c00'};
 var curReplica='avg',curProduct='all',curDest='all';
@@ -44270,6 +45606,91 @@ function renderModalChart(){
   CH.modal=c;
 }
 
+
+function gKey(i,j){return i+'|'+j;}
+function computeGreedy(prod){
+  var dist=SOL.distancias,L=GREEDY.bounds.L,U=GREEDY.bounds.U,ck=GREEDY.costo_km;
+  var alloc={},steps=[];
+  GREEDY.destinos.forEach(function(i){alloc[i]={};GREEDY.productos.forEach(function(j){alloc[i][j]=0;});});
+  GREEDY.productos.forEach(function(j){
+    var dests=GREEDY.destinos.filter(function(i){return (U[gKey(i,j)]||0)>0;});
+    dests.forEach(function(i){var lo=L[gKey(i,j)]||0;if(lo>0){alloc[i][j]=lo;steps.push({producto:j,destino:i,tipo:'minimo',vol:lo,cunit:ck*dist[i]});}});
+    var res=(prod[j]||0)-dests.reduce(function(s,i){return s+(L[gKey(i,j)]||0);},0);
+    dests.slice().sort(function(a,b){return dist[a]-dist[b];}).forEach(function(i){
+      if(res<=1e-9)return;
+      var add=Math.min(res,(U[gKey(i,j)]||0)-alloc[i][j]);
+      if(add>1e-9){alloc[i][j]+=add;res-=add;steps.push({producto:j,destino:i,tipo:'llenado',vol:add,cunit:ck*dist[i]});}
+    });
+  });
+  var cacum=0;steps.forEach(function(s){s.cinc=s.vol*s.cunit;cacum+=s.cinc;s.cacum=cacum;});
+  var cost=0;GREEDY.destinos.forEach(function(i){GREEDY.productos.forEach(function(j){cost+=alloc[i][j]*ck*dist[i];});});
+  return {alloc:alloc,steps:steps,cost:cost};
+}
+function gKpi(l,v,c,cls){return '<div class="kpi '+(cls||'')+'"><div class="lbl">'+l+'</div><div class="val">'+v+'</div><div class="ci">'+c+'</div></div>';}
+var GST={steps:[],k:0,timer:null};
+function renderGreedy(){
+  var ds=getDS();var prod=ds.produccion||SOL.produccion;
+  var g=computeGreedy(prod);GST.steps=g.steps;
+  var lp=ds.costo_total_clp||SOL.costo_total_clp;
+  var gap=g.cost-lp,gp=lp?gap/lp*100:0;
+  document.getElementById('greedykpis').innerHTML=
+    gKpi('Costo Greedy','$'+fmt(g.cost)+' CLP','heuristica (sin solver)','green')+
+    gKpi('Costo Optimo (LP)','$'+fmt(lp)+' CLP','benchmark exacto','')+
+    gKpi('Brecha vs optimo',gp.toFixed(3)+'%','$'+fmt2(gap)+' CLP',(Math.abs(gp)<0.01?'green':'amber'))+
+    gKpi('Decisiones',''+g.steps.length,'pasos del algoritmo','');
+  drawGreedyFill(g.steps.length);renderTrace(-1);
+  var gs=document.getElementById('gstep');if(gs)gs.textContent='';
+}
+function drawGreedyFill(upTo){
+  var el=document.getElementById('greedyfill');if(!el)return;if(!CH.gfill)CH.gfill=echarts.init(el);
+  var dist=SOL.distancias;
+  var dests=GREEDY.destinos.slice().sort(function(a,b){return dist[a]-dist[b];});
+  var acc={};dests.forEach(function(i){acc[i]={P1:0,P2:0,P3:0};});
+  for(var s=0;s<upTo&&s<GST.steps.length;s++){var st=GST.steps[s];acc[st.destino][st.producto]+=st.vol;}
+  var names=dests.map(function(i){return SOL.destinos[i].nombre.replace('Planta ','').replace('Puerto ','P.')+' ('+dist[i].toFixed(0)+'km)';});
+  CH.gfill.setOption({tooltip:{trigger:'axis',axisPointer:{type:'shadow'},valueFormatter:function(v){return fmt(v)+' m3';}},
+    legend:{data:['P1','P2','P3'],top:0},grid:{left:10,right:14,top:30,bottom:0,containLabel:true},
+    xAxis:{type:'value',name:'m3'},yAxis:{type:'category',data:names,axisLabel:{fontSize:10}},
+    series:['P1','P2','P3'].map(function(j){return {name:j,type:'bar',stack:'t',data:dests.map(function(i){return +acc[i][j].toFixed(1);}),itemStyle:{color:COLORS[j]}};})},true);
+}
+function renderTrace(hl){
+  var tb=document.querySelector('#greedytrace tbody');if(!tb)return;
+  tb.innerHTML=GST.steps.map(function(s,idx){
+    var b='<span class="badge '+s.producto.toLowerCase()+'">'+s.producto+'</span>';
+    var tipo=s.tipo==='minimo'?'<span style="color:#64748b">minimo</span>':'<span style="color:#2e7d32">llenado</span>';
+    var bg=idx===hl?' style="background:#fff7e6"':'';
+    return '<tr'+bg+'><td>'+(idx+1)+'</td><td>'+b+'</td><td>'+SOL.destinos[s.destino].nombre+'</td><td>'+tipo+'</td><td>'+fmt(s.vol)+'</td><td>$'+fmt(s.cunit)+'</td><td>$'+fmt(s.cinc)+'</td><td>$'+fmt(s.cacum)+'</td></tr>';
+  }).join('');
+}
+function animateGreedy(){
+  var btn=document.getElementById('gplay');
+  if(GST.timer){clearInterval(GST.timer);GST.timer=null;btn.innerHTML='&#9654; Animar';return;}
+  GST.k=0;btn.innerHTML='&#10074;&#10074; Pausa';
+  GST.timer=setInterval(function(){
+    GST.k++;
+    if(GST.k>GST.steps.length){clearInterval(GST.timer);GST.timer=null;btn.innerHTML='&#9654; Animar';
+      var last=GST.steps.length?GST.steps[GST.steps.length-1].cacum:0;
+      document.getElementById('gstep').textContent='Completado: '+GST.steps.length+' decisiones, costo total $'+fmt(last);return;}
+    drawGreedyFill(GST.k);renderTrace(GST.k-1);
+    var st=GST.steps[GST.k-1];
+    document.getElementById('gstep').innerHTML='Paso '+GST.k+'/'+GST.steps.length+': '+st.producto+' &rarr; '+SOL.destinos[st.destino].nombre+' ('+st.tipo+' +'+fmt(st.vol)+' m3) | acum $'+fmt(st.cacum);
+  },650);
+}
+function resetGreedy(){var btn=document.getElementById('gplay');if(GST.timer){clearInterval(GST.timer);GST.timer=null;}btn.innerHTML='&#9654; Animar';drawGreedyFill(GST.steps.length);renderTrace(-1);var gs=document.getElementById('gstep');if(gs)gs.textContent='';}
+function renderGreedyCompare(){
+  var el=document.getElementById('greedycmp');if(!el)return;if(!CH.gcmp)CH.gcmp=echarts.init(el);
+  var reps=Object.keys(GREEDY.greedy).filter(function(k){return k!=='avg';}).sort();
+  var gd=reps.map(function(k){return Math.round(GREEDY.greedy[k].costo_total_clp);});
+  var lp=reps.map(function(k){return Math.round(GREEDY.greedy[k].lp_costo_clp||0);});
+  CH.gcmp.setOption({tooltip:{trigger:'axis',axisPointer:{type:'shadow'},formatter:function(p){var s=p[0].axisValue+'<br/>';p.forEach(function(i){s+=i.marker+i.seriesName+': $'+fmt(i.value)+'<br/>';});s+='<b>Brecha: $'+fmt(Math.abs(gd[p[0].dataIndex]-lp[p[0].dataIndex]))+'</b>';return s;}},
+    legend:{data:['Greedy','Optimo LP'],top:0},grid:{left:10,right:14,top:30,bottom:0,containLabel:true},
+    xAxis:{type:'category',data:reps.map(function(k){return 'Rep '+k;})},
+    yAxis:{type:'value',axisLabel:{formatter:function(v){return '$'+(v/1e6).toFixed(0)+'M';}}},
+    series:[{name:'Greedy',type:'bar',data:gd,itemStyle:{color:'#2e7d32'},barGap:'10%'},{name:'Optimo LP',type:'bar',data:lp,itemStyle:{color:'#1565c0'}}]},true);
+}
+document.addEventListener('click',function(e){if(!e.target)return;if(e.target.id==='gplay')animateGreedy();else if(e.target.id==='greset')resetGreedy();});
+
+
 function refreshAll(){
   safeCall(renderKPIs,'KPIs');
   loadLeaflet(function(){safeCall(renderMap,'Mapa');});
@@ -44281,6 +45702,7 @@ function refreshAll(){
   safeCall(renderTable,'Tabla');
   safeCall(renderTruckChart,'TruckChart');
   safeCall(renderModalChart,'ModalChart');
+  safeCall(renderGreedy,'Greedy');safeCall(renderGreedyCompare,'GreedyCmp');
 }
 
 function renderAll(){

@@ -142,9 +142,10 @@ table.dt .bn{font-weight:800;color:var(--bad)}
 
 <div class="section">
   <h2><span class="tag">Estado estacionario</span> Warm-up: convergencia a r&eacute;gimen</h2>
-  <div class="desc">El sistema arranca vac&iacute;o; los primeros d&iacute;as son transitorio que se descarta. El warm-up principal es el del <b>Apunte (185,75 h, estabilizaci&oacute;n de batch_volume_m3)</b>; con el selector se compara contra el criterio de Welch (~14 d). Curvas = salida diaria por estaci&oacute;n normalizada por su media de r&eacute;gimen.</div>
+  <div class="desc">El sistema arranca vac&iacute;o; los primeros d&iacute;as son transitorio que se descarta. <b>El transitorio var&iacute;a por r&eacute;plica y estaci&oacute;n</b>: las de bajo volumen (ba&ntilde;o/impregnado) tardan m&aacute;s. Por eso se usa UN warm-up conservador &mdash; principal <b>216 h (~9 d)</b> &mdash; que cubre la r&eacute;plica m&aacute;s lenta; el selector permite 185,75 h (Apunte) o 14 d (Welch). Curvas = salida diaria por estaci&oacute;n normalizada por su media de r&eacute;gimen.</div>
+  <div class="fres" id="warmnote" style="margin:0 2px 10px"></div>
   <div class="formula"><div class="ftitle">C&oacute;mo se calcula</div>
-    <code>Apunte: warm-up = 185,75 h (tama&ntilde;o de lote batch_volume_m3 se normaliza)</code>
+    <code>Principal: warm-up = 216 h (~9 d); cubre la r&eacute;plica/estaci&oacute;n m&aacute;s lenta (ba&ntilde;o/impregnado ~210 h)</code>
     <code>Welch (ref): MA(7) de la salida; fin del transitorio = 1.er d&iacute;a con |norm-1|&le;12% sostenido 7 d</code>
     <code>Intervalos que cruzan el corte se recortan (solo cuenta la parte posterior)</code>
     <div class="mut">El WIP de log_yard NO es estacionario (crece sin acotarse); por eso el warm-up se fija con la salida y el tama&ntilde;o de lote, no con el WIP.</div></div>
@@ -666,7 +667,7 @@ function renderFormulaResults(){
 
 function renderSupuestos(){const PA=META.parametros||{};
   const items=[
-    'Warm-up = <b>185,75 h (Apunte, batch_volume_m3)</b>; configurable a 14 d (Welch). Intervalos que cruzan el corte se recortan.',
+    'Warm-up principal = <b>216 h (~9 d)</b>: cubre la estaci&oacute;n/r&eacute;plica m&aacute;s lenta (ba&ntilde;o/impregnado ~210 h). El transitorio var&iacute;a por r&eacute;plica; se usa UN warm-up conservador (no uno por r&eacute;plica). Apunte (185,75 h) y Welch (14 d) seleccionables; intervalos que cruzan el corte se recortan.',
     'Fuente principal: <b>station_events.csv</b> (estados reales). failures.csv solo valida fallas/reparaciones.',
     'OFF_SHIFT se <b>excluye</b> de los denominadores de disponibilidad y utilizaci&oacute;n.',
     'Fallas dependientes de operaci&oacute;n: v&aacute;lidas si la m&aacute;quina estaba BUSY; en OFF_SHIFT se invalidan (en los datos: 0 inv&aacute;lidas).',
@@ -677,6 +678,11 @@ function renderSupuestos(){const PA=META.parametros||{};
     'Intervalos sin solape (auditado); suma de estados = 8.760 h por estaci&oacute;n.',
     'Demanda por nodo en <b>miles de m&sup3;/a&ntilde;o</b>; el valor "800" de P3-San Vicente es an&oacute;malo (se usa 0,8).'];
   document.getElementById('supuestos').innerHTML=items.map(t=>`<li>${t}</li>`).join('');}
+function renderWarmNote(){const C=META.convergencia,el=document.getElementById('warmnote');if(!el)return;
+  if(!C||!C.per_rep_bv){el.style.display='none';return;}
+  const slow=['bano','impregnado'].filter(s=>C.per_rep_bv[s]);
+  const rows=slow.map(s=>s+': '+C.per_rep_bv[s].map((c,i)=>'r'+i+'='+(c?Math.round(c)+'h':'-')).join(' ')).join('  |  ');
+  el.innerHTML='&rarr; Estabilizaci&oacute;n de batch_volume_m3 por r&eacute;plica (estaciones lentas) &mdash; '+rows+'  &middot;  el warm-up principal (216 h) cubre la r&eacute;plica m&aacute;s lenta.';}
 
 function updatePeriodUI(){const tag=document.getElementById('periodtag'),warn=document.getElementById('winwarn'),w=V.window;
   let label;if(curMonth==='all')label=`A&ntilde;o &middot; d&iacute;as ${w.d0}&ndash;${w.d1} (post warm-up) &middot; ${w.nWin} d`;
@@ -701,9 +707,9 @@ function applyStationFilter(){const pills=document.querySelectorAll('#stationpil
   curStations=(sel.length===STATIONS.length||!sel.length)?null:sel;renderAll();}
 
 (function(){const A=META.audit||{};
-  document.getElementById('methnote').innerHTML=`<b>Metodolog&iacute;a Factory Physics:</b> ${META.nreps} r&eacute;plicas &middot; warm-up <b>185,75 h (Apunte)</b> &middot; m&eacute;tricas emp&iacute;ricas de station_events &middot; filtros (r&eacute;plica/producto/periodo/m&aacute;quina/warm-up) recalculan todo &middot; <b style="color:#2e7d32">auditor&iacute;a ${A.npass||'-'}/${A.ntotal||'-'} PASS</b>.`;
+  document.getElementById('methnote').innerHTML=`<b>Metodolog&iacute;a Factory Physics:</b> ${META.nreps} r&eacute;plicas &middot; warm-up <b>216 h / 9 d</b> (cubre la r&eacute;plica m&aacute;s lenta) &middot; m&eacute;tricas emp&iacute;ricas de station_events &middot; filtros (r&eacute;plica/producto/periodo/m&aacute;quina/warm-up) recalculan todo &middot; <b style="color:#2e7d32">auditor&iacute;a ${A.npass||'-'}/${A.ntotal||'-'} PASS</b>.`;
   const rs=document.getElementById('repsel');rs.innerHTML='<option value="avg">Promedio (5 r&eacute;plicas)</option>'+[0,1,2,3,4].map(r=>`<option value="${r}">R&eacute;plica ${r}</option>`).join('');
-  const ws=document.getElementById('warmsel');ws.innerHTML=`<option value="${META.warmup_days}">185,75 h (Apunte)</option><option value="${WELCH_D}">~14 d (Welch)</option>`;
+  const ws=document.getElementById('warmsel');ws.innerHTML=`<option value="${META.warmup_inter_days}">9 d / 216 h (principal)</option><option value="${META.warmup_apunte_days}">185,75 h (Apunte)</option><option value="${META.warmup_welch_days}">14 d / 336 h (Welch)</option>`;
   const msel=document.getElementById('monthsel');msel.innerHTML='<option value="all">Todos</option>'+META.months.map(m=>`<option value="${m.idx}">${m.name}</option>`).join('');
   const dsel=document.getElementById('daysel');
   function fillDays(){if(curMonth==='all'){dsel.innerHTML='<option value="all">Todos</option>';dsel.disabled=true;return;}
@@ -717,7 +723,7 @@ function applyStationFilter(){const pills=document.querySelectorAll('#stationpil
   renderStationFilter();document.getElementById('filterbtn').onclick=applyStationFilter;
   document.getElementById('foot').innerHTML='Aserradero CMPC Mulch&eacute;n &middot; Parte 1 &middot; Factory Physics (Hopp &amp; Spearman) &middot; Python + ECharts (offline)';
   const ld=document.getElementById('loader');ld.style.display='block';
-  renderKpiFormula();renderAudit();renderSupuestos();renderAll();
+  renderKpiFormula();renderAudit();renderSupuestos();renderWarmNote();renderAll();
   ld.style.display='none';
   window.addEventListener('resize',()=>Object.values(CHARTS).forEach(c=>c.resize()));
 })();

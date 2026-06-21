@@ -28,6 +28,11 @@ import numpy as np
 import pandas as pd
 import pulp
 
+try:
+    sys.stdout.reconfigure(encoding="utf-8")   # evita UnicodeEncodeError en consola Windows (cp1252)
+except Exception:
+    pass
+
 PARTE2 = Path(__file__).resolve().parent
 BASE = PARTE2.parent
 

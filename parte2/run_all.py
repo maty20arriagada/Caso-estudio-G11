@@ -16,6 +16,7 @@ PARTE2 = Path(__file__).resolve().parent
 STEPS = [
     ("Parseando KML (distancias de Google Earth)", "kml_parser.py"),
     ("Resolviendo modelo de distribucion (PuLP + CBC)", "modelo_distribucion.py"),
+    ("Heuristica Greedy (sin solver) + comparacion con LP", "heuristica_greedy.py"),
     ("Generando dashboard HTML", "build_dashboard.py"),
 ]
 
